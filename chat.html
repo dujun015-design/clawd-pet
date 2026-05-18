@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Claude</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --bg-elevated: #fff;
+      --border: #ececec;
+      --text: #1c1c1e;
+      --text-muted: #8e8e93;
+      --accent: #c46a2f;
+      --accent-soft: #fdf3ec;
+      --bubble-user: #1c1c1e;
+      --bubble-user-text: #fff;
+      --bubble-claude: #f4f4f5;
+      --bubble-claude-text: #1c1c1e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --bg-elevated: #242427;
+        --border: #2f2f33;
+        --text: #f2f2f7;
+        --text-muted: #8e8e93;
+        --accent: #e07b39;
+        --accent-soft: #2a1f17;
+        --bubble-user: #e07b39;
+        --bubble-user-text: #fff;
+        --bubble-claude: #2c2c2f;
+        --bubble-claude-text: #f2f2f7;
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, 'SF Pro Text', BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Titlebar — leaves 80px on the left for macOS traffic-light buttons */
+    #titlebar {
+      height: 38px;
+      padding-left: 80px;
+      padding-right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: drag;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: relative;
+    }
+    #title-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .title-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 6px;
+      font-weight: 400;
+    }
+
+    /* Messages */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+    #messages::-webkit-scrollbar { width: 6px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 3px;
+    }
+    #messages:hover::-webkit-scrollbar-thumb {
+      background: var(--border);
+    }
+
+    .msg {
+      max-width: 82%;
+      display: flex;
+      flex-direction: column;
+    }
+    .msg.user { align-self: flex-end; }
+    .msg.claude { align-self: flex-start; }
+
+    .bubble-text {
+      padding: 9px 13px;
+      border-radius: 16px;
+      word-wrap: break-word;
+      word-break: break-word;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .user .bubble-text { white-space: pre-wrap; }
+
+    /* Markdown styles inside Claude bubbles */
+    .claude .bubble-text p   { margin: 0; }
+    .claude .bubble-text p + p,
+    .claude .bubble-text ul,
+    .claude .bubble-text ol,
+    .claude .bubble-text pre,
+    .claude .bubble-text blockquote { margin-top: 8px; }
+    .claude .bubble-text h1,
+    .claude .bubble-text h2,
+    .claude .bubble-text h3 {
+      font-size: 14px; font-weight: 700;
+      margin: 8px 0 4px;
+    }
+    .claude .bubble-text ul,
+    .claude .bubble-text ol { padding-left: 22px; }
+    .claude .bubble-text li { margin: 2px 0; }
+    .claude .bubble-text strong { font-weight: 700; }
+    .claude .bubble-text em { font-style: italic; }
+    .claude .bubble-text code {
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 12.5px;
+      background: rgba(0,0,0,0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .claude .bubble-text code { background: rgba(255,255,255,0.1); }
+    }
+    .claude .bubble-text pre {
+      background: rgba(0,0,0,0.06);
+      padding: 8px 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    @media (prefers-color-scheme: dark) {
+      .claude .bubble-text pre { background: rgba(255,255,255,0.08); }
+    }
+    .claude .bubble-text pre code {
+      background: transparent;
+      padding: 0;
+      font-size: 12.5px;
+    }
+    .claude .bubble-text blockquote {
+      border-left: 3px solid var(--border);
+      padding-left: 10px;
+      color: var(--text-muted);
+    }
+    .claude .bubble-text a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .claude .bubble-text a:hover { text-decoration: underline; }
+    .claude .bubble-text hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0;
+    }
+    .user .bubble-text {
+      background: var(--bubble-user);
+      color: var(--bubble-user-text);
+      border-bottom-right-radius: 4px;
+    }
+    .claude .bubble-text {
+      background: var(--bubble-claude);
+      color: var(--bubble-claude-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--accent);
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 0.9s step-end infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0; }
+    }
+
+    .error-text { color: #ff453a; font-size: 13px; }
+
+    /* Input bar */
+    #inputbar {
+      padding: 10px 14px 14px;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    #input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 6px 6px 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    #input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 120px;
+      min-height: 22px;
+      line-height: 1.45;
+      padding: 5px 0;
+    }
+    #input::placeholder { color: var(--text-muted); }
+
+    #send {
+      width: 30px;
+      height: 30px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+    #send:hover  { transform: scale(1.05); }
+    #send:active { transform: scale(0.92); }
+    #send:disabled {
+      background: var(--border);
+      cursor: default;
+      transform: none;
+    }
+    #send svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body>
+  <div id="titlebar">
+    <span id="title-text">Clawd</span>
+    <span id="model-label" class="title-sub">…</span>
+  </div>
+
+  <div id="messages">
+    <div class="msg claude">
+      <div class="bubble-text">你好 👋 想聊点什么？</div>
+    </div>
+  </div>
+
+  <div id="inputbar">
+    <div id="input-wrap">
+      <textarea id="input" rows="1" placeholder="发消息……"></textarea>
+      <button id="send" aria-label="发送">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M13 6l6 6-6 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron')
+    const { marked } = require('marked')
+
+    marked.setOptions({
+      gfm: true,
+      breaks: true,    // Treat single newlines as <br>
+    })
+
+    function renderMd(text) {
+      try { return marked.parse(text || '') } catch { return text }
+    }
+
+    const messagesEl = document.getElementById('messages')
+    const inputEl    = document.getElementById('input')
+    const sendBtn    = document.getElementById('send')
+    const modelLabel = document.getElementById('model-label')
+
+    // Show active provider/model in titlebar
+    const provInfo = ipcRenderer.sendSync('get-provider')
+    if (provInfo) {
+      modelLabel.textContent = `${provInfo.provider} · ${provInfo.model}`
+    } else {
+      modelLabel.textContent = '未配置 API'
+      modelLabel.style.color = '#ff453a'
+    }
+
+    const history = []
+    let claudeEl = null
+    let isStreaming = false
+
+    function scrollBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight
+    }
+
+    function addMessage(role, text) {
+      const wrap = document.createElement('div')
+      wrap.className = `msg ${role}`
+      const bubble = document.createElement('div')
+      bubble.className = 'bubble-text'
+      if (role === 'claude') {
+        bubble.dataset.raw = text || ''
+        bubble.innerHTML = renderMd(text || '')
+      } else {
+        bubble.textContent = text
+      }
+      wrap.appendChild(bubble)
+      messagesEl.appendChild(wrap)
+      requestAnimationFrame(scrollBottom)
+      return bubble
+    }
+
+    function setStreaming(on) {
+      isStreaming = on
+      sendBtn.disabled = on
+    }
+
+    function sendMessage() {
+      const text = inputEl.value.trim()
+      if (!text || isStreaming) return
+
+      inputEl.value = ''
+      inputEl.style.height = ''
+
+      addMessage('user', text)
+      history.push({ role: 'user', content: text })
+
+      setStreaming(true)
+      claudeEl = addMessage('claude', '')
+
+      ipcRenderer.send('send-prompt', { prompt: text, history: [...history] })
+    }
+
+    function appendCursor(el) {
+      const cursor = document.createElement('span')
+      cursor.className = 'cursor'
+      el.appendChild(cursor)
+    }
+
+    ipcRenderer.on('stream-chunk', (_, chunk) => {
+      if (!claudeEl) return
+      const raw = (claudeEl.dataset.raw || '') + chunk
+      claudeEl.dataset.raw = raw
+      claudeEl.innerHTML = renderMd(raw)
+      appendCursor(claudeEl)
+      scrollBottom()
+    })
+
+    ipcRenderer.on('stream-done', () => {
+      if (claudeEl) {
+        const raw = claudeEl.dataset.raw || ''
+        claudeEl.innerHTML = renderMd(raw)
+        history.push({ role: 'assistant', content: raw })
+        claudeEl = null
+      }
+      setStreaming(false)
+      inputEl.focus()
+    })
+
+    ipcRenderer.on('stream-error', (_, msg) => {
+      if (claudeEl) {
+        claudeEl.innerHTML = `<span class="error-text">出错了：${msg}</span>`
+        claudeEl = null
+      }
+      setStreaming(false)
+    })
+
+    sendBtn.addEventListener('click', sendMessage)
+
+    // Track IME (Chinese pinyin) composition state — Enter during composition
+    // is consumed by the IME, not for sending.
+    let composing = false
+    inputEl.addEventListener('compositionstart', () => { composing = true })
+    inputEl.addEventListener('compositionend',   () => { composing = false })
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // Skip if IME is actively composing
+        if (composing || e.isComposing || e.keyCode === 229) return
+        e.preventDefault()
+        sendMessage()
+      }
+    })
+
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = ''
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px'
+    })
+
+    inputEl.focus()
+  </script>
+</body>
+</html>

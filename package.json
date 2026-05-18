@@ -1,0 +1,18 @@
+{
+  "name": "claude-desktop-pet",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-packager . Clawd --platform=darwin --arch=arm64 --icon=build/icon.icns --overwrite --out=dist --app-bundle-id=com.clawd.desktoppet --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "marked": "^18.0.3",
+    "openai": "^6.38.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.0.0",
+    "electron": "^36.9.5"
+  }
+}

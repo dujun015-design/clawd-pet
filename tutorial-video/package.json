@@ -1,0 +1,29 @@
+{
+  "name": "tutorial-video",
+  "version": "1.0.0",
+  "description": "Clawd 教程视频 - Remotion",
+  "main": "index.js",
+  "scripts": {
+    "start": "remotion studio src/index.ts",
+    "build": "remotion render src/index.ts TutorialVideo out/video.mp4",
+    "build:intro": "remotion render src/index.ts Intro out/intro.mp4",
+    "build:outro": "remotion render src/index.ts Outro out/outro.mp4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@remotion/bundler": "^4.0.462",
+    "@remotion/cli": "^4.0.462",
+    "@remotion/renderer": "^4.0.462",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "remotion": "^4.0.462"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
+  }
+}

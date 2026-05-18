@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      -webkit-app-region: no-drag;
+    }
+
+    #pet-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 140px;
+      height: 140px;
+      will-change: transform;
+      cursor: grab;
+      user-select: none;
+    }
+    #pet-wrap.dragging { cursor: grabbing; }
+
+    #pet {
+      width: 140px;
+      height: 140px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      -webkit-user-drag: none;
+      pointer-events: auto;
+    }
+
+    /* Status dot — appears in lower-right corner of the crab's body */
+    #status-dot {
+      position: absolute;
+      bottom: 24px;
+      right: 38px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      border: 1.5px solid rgba(255,255,255,0.95);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+    #status-dot.thinking { background: #facc15; animation: pulse 1s infinite; }
+    #status-dot.working  { background: #f97316; animation: pulse 0.5s infinite; }
+    #status-dot.done     { background: #60a5fa; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    /* Speech bubble — sits above the crab */
+    #bubble {
+      position: absolute;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1.5px solid #e07b39;
+      border-radius: 10px;
+      padding: 5px 10px;
+      font: 500 11px -apple-system, 'SF Pro Text', 'PingFang SC', sans-serif;
+      white-space: nowrap;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      color: #333;
+      max-width: 240px;
+    }
+    #bubble::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #e07b39;
+    }
+    #status-dot.thinking { background: #facc15; animation: pulse 1s infinite; }
+    #status-dot.working  { background: #f97316; animation: pulse 0.5s infinite; }
+    #status-dot.done     { background: #60a5fa; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="pet-wrap">
+    <div id="bubble"></div>
+    <img id="pet" src="assets/gif/clawd-idle.gif" draggable="false" alt="Clawd">
+    <div id="status-dot"></div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

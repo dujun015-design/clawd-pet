@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+build/icon.iconset/
+
+# Sensitive config
+.clawd-config.json
+*.local.json
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Tutorial video subproject (单独管理)
+tutorial-video/node_modules/
+tutorial-video/out/
+
+# Recordings (太大，不传)
+*.mov
+*.mp4
