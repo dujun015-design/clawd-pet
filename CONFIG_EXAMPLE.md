@@ -73,6 +73,28 @@
 }
 ```
 
+## 自定义皮肤 🎨
+
+加 `skin` 字段切换皮肤：
+
+```json
+{
+  "provider": "deepseek",
+  "apiKey": "sk-xxx",
+  "skin": "clawd-mini"
+}
+```
+
+**内置 skin**：
+- `clawd`（默认，原版 Clawd 螃蟹）
+- `clawd-mini`（迷你版）
+
+**用自定义皮肤**：把你的 GIF 文件夹放到 `~/.clawd/skins/<名字>/`，然后 `"skin": "<名字>"` 即可。
+
+或者直接写绝对路径：`"skin": "/path/to/my-skin"`。
+
+详细做法见 [SKINS.md](./SKINS.md)。
+
 ## 配置后
 
 文件保存后**重启 Clawd 应用**才会生效。

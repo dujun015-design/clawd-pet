@@ -1,0 +1,7 @@
+{
+  "name": "Clawd",
+  "description": "Anthropic 官方 Clawd 螃蟹（默认 skin）",
+  "author": "Anthropic",
+  "license": "AGPL-3.0 (from clawd-on-desk)",
+  "version": "1.0.0"
+}

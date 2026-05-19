@@ -37,6 +37,7 @@ function loadConfig() {
         apiKey: cfg.apiKey || preset.apiKey || process.env.ANTHROPIC_API_KEY,
         baseURL: cfg.baseURL || preset.baseURL,
         model: cfg.model || preset.defaultModel,
+        skin: cfg.skin,
       }
     } catch (e) {
       console.error('Failed to parse ~/.clawd-config.json:', e.message)
@@ -99,9 +100,61 @@ function setStatus(state, message) {
   }
 }
 
+// ── Skin 系统 ─────────────────────────────────────────────────────────────
+// 解析 skin 路径，优先级：
+//   1. 绝对路径（用户写死的）
+//   2. ~/.clawd/skins/<name>/  （用户安装的皮肤）
+//   3. <appPath>/assets/skins/<name>/  （内置皮肤）
+//   4. fallback 到内置 clawd
+function resolveSkinPath(skinName) {
+  const builtinDir = path.join(__dirname, 'assets', 'skins')
+  const userDir = path.join(os.homedir(), '.clawd', 'skins')
+  const fallback = path.join(builtinDir, 'clawd')
+
+  if (!skinName) return fallback
+  if (path.isAbsolute(skinName) && fs.existsSync(skinName)) return skinName
+  if (skinName.startsWith('~')) {
+    const expanded = skinName.replace(/^~/, os.homedir())
+    if (fs.existsSync(expanded)) return expanded
+  }
+  const userSkin = path.join(userDir, skinName)
+  if (fs.existsSync(userSkin)) return userSkin
+  const builtin = path.join(builtinDir, skinName)
+  if (fs.existsSync(builtin)) return builtin
+  console.warn(`[Clawd] skin "${skinName}" not found, falling back to clawd`)
+  return fallback
+}
+
+// 扫描 skin 目录，缺失状态自动 fallback 到 idle.gif
+function scanSkin(skinPath) {
+  const STATES = [
+    'idle', 'reading', 'typing', 'thinking', 'building', 'debugger',
+    'happy', 'error', 'sleeping', 'sweeping', 'carrying', 'conducting',
+    'juggling', 'groove', 'notification', 'annoyed', 'jump',
+    'walk', 'peek', 'alert',
+  ]
+  const result = {}
+  const idleFile = path.join(skinPath, 'idle.gif')
+  const idleExists = fs.existsSync(idleFile)
+  for (const state of STATES) {
+    const file = path.join(skinPath, `${state}.gif`)
+    if (fs.existsSync(file)) result[state] = file
+    else if (idleExists)    result[state] = idleFile
+  }
+  return result
+}
+
 ipcMain.on('init', (event) => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  event.returnValue = { screenW: width, screenH: height }
+  const skinPath = resolveSkinPath(config?.skin)
+  const animations = scanSkin(skinPath)
+  console.log(`[Clawd] skin: ${path.basename(skinPath)} (${Object.keys(animations).length} states)`)
+  event.returnValue = {
+    screenW: width,
+    screenH: height,
+    skinPath,
+    animations,
+  }
 })
 
 ipcMain.on('set-ignore', (_, ignore) => {

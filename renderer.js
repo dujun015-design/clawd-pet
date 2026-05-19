@@ -6,7 +6,7 @@ const wrap = document.getElementById('pet-wrap')
 const bubble = document.getElementById('bubble')
 const dot = document.getElementById('status-dot')
 
-const { screenW, screenH } = ipcRenderer.sendSync('init')
+const { screenW, screenH, animations: ANIMATIONS } = ipcRenderer.sendSync('init')
 
 const PET_W = 140
 const PET_H = 140
@@ -23,42 +23,20 @@ function setPetPos(x, y) {
 setPetPos(petX, petY)
 
 // ── Animation: img.src swap, GIF handles internal frames ─────────────────
-// State name → GIF filename (without prefix)
-const ANIMATIONS = {
-  idle:        'clawd-idle.gif',
-  reading:     'clawd-idle-reading.gif',
-  typing:      'clawd-typing.gif',
-  thinking:    'clawd-thinking.gif',
-  building:    'clawd-building.gif',
-  debugger:    'clawd-debugger.gif',
-  happy:       'clawd-happy.gif',
-  error:       'clawd-error.gif',
-  sleeping:    'clawd-sleeping.gif',
-  sweeping:    'clawd-sweeping.gif',
-  carrying:    'clawd-carrying.gif',
-  conducting:  'clawd-conducting.gif',
-  juggling:    'clawd-juggling.gif',
-  groove:      'clawd-headphones-groove.gif',
-  notification:'clawd-notification.gif',
-  annoyed:     'clawd-react-annoyed.gif',
-  jump:        'clawd-react-double-jump.gif',
-  walk:        'clawd-mini-crabwalk.gif',
-  peek:        'clawd-mini-peek.gif',
-  alert:       'clawd-mini-alert.gif',
-}
+// ANIMATIONS 由 main 进程根据当前 skin 推送，state → 绝对路径
+// 缺失的 state 已在 main 端 fallback 到 idle.gif
 
 let currentState = 'idle'
 
 function setState(name) {
   if (currentState === name) return
-  const gif = ANIMATIONS[name]
-  if (!gif) return
+  const file = ANIMATIONS[name]
+  if (!file) return
   currentState = name
   // Setting src to empty then to new value forces GIF to restart from frame 0
-  // without appending query strings (which can fail inside packaged asar files).
-  const newSrc = `assets/gif/${gif}`
+  // file:// 前缀，绕开 packaged asar 路径问题
   pet.src = ''
-  pet.src = newSrc
+  pet.src = file.startsWith('file://') ? file : `file://${file}`
 }
 
 // ── Drag (Pointer Events with capture for robust tracking) ───────────────

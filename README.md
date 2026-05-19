@@ -22,7 +22,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/YOUR_USERNAME/clawd.git
+git clone https://github.com/dujun015-design/clawd-pet.git
 cd clawd
 
 # 2. 装依赖

@@ -1,0 +1,7 @@
+{
+  "name": "Mini Clawd",
+  "description": "更小更可爱的迷你 Clawd（缺失状态自动回退到 idle）",
+  "author": "Anthropic",
+  "license": "AGPL-3.0",
+  "version": "1.0.0"
+}

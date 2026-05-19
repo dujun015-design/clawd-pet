@@ -103,7 +103,7 @@ export const Outro: React.FC = () => {
           boxShadow: '0 12px 32px rgba(224,123,57,0.2)',
         }}
       >
-        github.com/你的用户名/clawd
+        github.com/dujun015-design/clawd-pet
       </div>
 
       <div
