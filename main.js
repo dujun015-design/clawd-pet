@@ -181,9 +181,11 @@ ipcMain.on('open-chat', () => {
   })
   chatWin.loadFile('chat.html')
 
-  // Cmd+Alt+I opens dev tools for debugging
+  // Cmd+Alt+I (mac) / Ctrl+Shift+I (win/linux) 打开 DevTools
   chatWin.webContents.on('before-input-event', (e, input) => {
-    if (input.key === 'I' && input.alt && input.meta) {
+    const isMacShortcut = input.key === 'I' && input.alt && input.meta
+    const isWinShortcut = input.key === 'I' && input.shift && input.control
+    if (isMacShortcut || isWinShortcut) {
       chatWin.webContents.openDevTools({ mode: 'detach' })
     }
   })
@@ -331,14 +333,101 @@ const ACTIVITY_ANIM = {
   browse:   'idle',
 }
 
+// ── 跨平台拿前台 App 名 ──
+// macOS  → osascript
+// Windows → PowerShell + Win32 API（返回的是 ProcessName，例如 "Code"、"chrome"）
+// Linux  → xdotool（返回 WM_CLASS）
 function getActiveApp() {
-  return new Promise((resolve) => {
-    exec(
-      `osascript -e 'tell application "System Events" to get name of first process whose frontmost is true'`,
-      { timeout: 2000 },
-      (err, stdout) => resolve(err ? null : stdout.trim())
-    )
-  })
+  if (process.platform === 'darwin') {
+    return new Promise((resolve) => {
+      exec(
+        `osascript -e 'tell application "System Events" to get name of first process whose frontmost is true'`,
+        { timeout: 2000 },
+        (err, stdout) => resolve(err ? null : stdout.trim())
+      )
+    })
+  }
+  if (process.platform === 'win32') {
+    const psFile = path.join(__dirname, 'scripts', 'get-active-app.ps1')
+    return new Promise((resolve) => {
+      exec(
+        `powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`,
+        { timeout: 5000, windowsHide: true },
+        (err, stdout) => resolve(err ? null : stdout.trim())
+      )
+    })
+  }
+  if (process.platform === 'linux') {
+    const shFile = path.join(__dirname, 'scripts', 'get-active-app.sh')
+    return new Promise((resolve) => {
+      exec(
+        `bash "${shFile}"`,
+        { timeout: 2000 },
+        (err, stdout) => resolve(err ? null : stdout.trim())
+      )
+    })
+  }
+  return Promise.resolve(null)
+}
+
+// Windows 进程名 → 等价的 macOS 应用名（统一查 ACTIVITY_MAP）
+const WIN_TO_MAC = {
+  // 浏览器
+  'chrome': 'Google Chrome',
+  'msedge': 'Microsoft Edge',
+  'firefox': 'Firefox',
+  'iexplore': 'Safari',     // 没人用 IE，姑且 fallback
+  'Arc': 'Arc',
+  // 编辑器
+  'Code': 'Code',
+  'Cursor': 'Cursor',
+  'devenv': 'IntelliJ IDEA',     // Visual Studio 暂归类到编程
+  'idea64': 'IntelliJ IDEA',
+  'pycharm64': 'PyCharm',
+  'webstorm64': 'WebStorm',
+  'sublime_text': 'Sublime Text',
+  'Zed': 'Zed',
+  'notepad': 'Notes',
+  'notepad++': 'Notes',
+  // 终端
+  'WindowsTerminal': 'Terminal',
+  'cmd': 'Terminal',
+  'powershell': 'Terminal',
+  'pwsh': 'Terminal',
+  // IM / 聊天
+  'WeChat': 'WeChat',
+  'WeChatApp': 'WeChat',
+  'QQ': 'QQ',
+  'TIM': 'QQ',
+  'Telegram': 'Telegram',
+  'Discord': 'Discord',
+  'slack': 'Slack',
+  'Slack': 'Slack',
+  'Outlook': 'Mail',
+  // 笔记 / 文档
+  'Notion': 'Notion',
+  'Obsidian': 'Obsidian',
+  'WINWORD': 'Microsoft Word',
+  // 音乐 / 视频
+  'Spotify': 'Spotify',
+  'cloudmusic': 'NeteaseMusic',
+  'QQMusic': 'QQMusic',
+  'PotPlayerMini64': 'IINA',
+  'vlc': 'IINA',
+  // 设计
+  'Figma': 'Figma',
+  'Photoshop': 'Photoshop',
+  // AI
+  'Claude': 'Claude',
+  'ChatGPT': 'ChatGPT',
+}
+
+function normalizeAppName(name) {
+  if (!name) return name
+  if (process.platform === 'win32') {
+    return WIN_TO_MAC[name] || name
+  }
+  return name
 }
 
 let lastApp = null
@@ -349,11 +438,13 @@ let lastNotifyApp = null
 
 async function pollActivity() {
   if (!mainWin || mainWin.isDestroyed()) return
-  const appName = await getActiveApp()
-  if (!appName) return
+  const rawName = await getActiveApp()
+  if (!rawName) return
+  const appName = normalizeAppName(rawName)
 
-  // Skip self
-  if (appName === 'Electron' || appName === 'claude-desktop-pet') {
+  // Skip self（跨平台：Electron 在 Win 上叫 electron）
+  const selfNames = ['Electron', 'electron', 'claude-desktop-pet', 'Clawd', 'clawd-pet']
+  if (selfNames.includes(rawName) || selfNames.includes(appName)) {
     lastApp = appName
     return
   }

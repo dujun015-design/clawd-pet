@@ -4,7 +4,11 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "package": "electron-packager . Clawd --platform=darwin --arch=arm64 --icon=build/icon.icns --overwrite --out=dist --app-bundle-id=com.clawd.desktoppet --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset"
+    "package": "npm run package:mac",
+    "package:mac": "electron-packager . Clawd --platform=darwin --arch=arm64 --icon=build/icon.icns --overwrite --out=dist --app-bundle-id=com.clawd.desktoppet --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset --ignore=/tutorial-video --ignore=/recordings",
+    "package:mac-intel": "electron-packager . Clawd --platform=darwin --arch=x64 --icon=build/icon.icns --overwrite --out=dist --app-bundle-id=com.clawd.desktoppet --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset --ignore=/tutorial-video --ignore=/recordings",
+    "package:win": "electron-packager . Clawd --platform=win32 --arch=x64 --overwrite --out=dist --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset --ignore=/tutorial-video --ignore=/recordings",
+    "package:linux": "electron-packager . Clawd --platform=linux --arch=x64 --overwrite --out=dist --app-version=1.0.0 --ignore=/dist --ignore=/build/icon.iconset --ignore=/tutorial-video --ignore=/recordings"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",

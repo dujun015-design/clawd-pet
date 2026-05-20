@@ -32,3 +32,10 @@ tutorial-video/out/
 # Recordings (太大，不传)
 *.mov
 *.mp4
+gif-orig/
+
+# Tutorial video temporary outputs
+tutorial-video/public/gif-orig/
+tutorial-video/out/
+tutorial-video/raw-clips/*.mp4
+tutorial-video/recordings/
