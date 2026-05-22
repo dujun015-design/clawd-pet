@@ -1,0 +1,60 @@
+{
+  "_comment": "每段对应 TutorialV2 一个 Series.Sequence。durationSec 是视频时长，文本目标对齐这个时长。",
+  "segments": [
+    {
+      "id": "01-opening",
+      "durationSec": 15,
+      "text": "上次很多人问怎么做，今天出教程！手把手教你给电脑养一只AI小桌宠。它会看你在干嘛，能陪你聊天，超治愈。"
+    },
+    {
+      "id": "02-chapter-prepare",
+      "durationSec": 3,
+      "text": "第一步，准备工作。"
+    },
+    {
+      "id": "03-nodejs",
+      "durationSec": 12,
+      "text": "先去 Node 官网下载 LTS 版本，一路下一步就行。这是跑代码用的基础环境。"
+    },
+    {
+      "id": "04-deepseek",
+      "durationSec": 15,
+      "text": "再去 DeepSeek 平台注册账号，充一块钱，创建一个 API Key，复制下来待会要用。一块钱够聊好几千次，非常便宜。"
+    },
+    {
+      "id": "05-chapter-run",
+      "durationSec": 3,
+      "text": "第二步，下载和运行。"
+    },
+    {
+      "id": "06-clone",
+      "durationSec": 15,
+      "text": "打开终端，先 git clone 我的项目地址，然后 cd 进去，运行 npm install 装一下依赖。"
+    },
+    {
+      "id": "07-config",
+      "durationSec": 25,
+      "text": "这一步最关键。在你的 home 目录新建一个配置文件，叫 clawd-config 点 json。里面写两行就够了：provider 写 deepseek，apiKey 就粘贴你刚才复制的那个 key。保存退出，就配好了。"
+    },
+    {
+      "id": "08-start",
+      "durationSec": 17,
+      "text": "最后一步，运行 npm start。等几秒，看右下角，Clawd 螃蟹出现啦！它已经趴在你桌面上了。"
+    },
+    {
+      "id": "09-chapter-demo",
+      "durationSec": 3,
+      "text": "第三步，看效果。"
+    },
+    {
+      "id": "10-demo",
+      "durationSec": 27,
+      "text": "切到 VS Code，它会自动开始打字。切到 Spotify，戴上耳机摇摆起来。切到微信，变成一个指挥家。打开 Notion，安静地看书。深夜没动鼠标，自动睡觉。它知道你在做什么，随时陪着你。"
+    },
+    {
+      "id": "11-outro",
+      "durationSec": 15,
+      "text": "完整源码和打包好的 app 都在简介里。觉得好玩点个赞，关注我，下期教你怎么自己画一只属于你的桌宠皮肤！"
+    }
+  ]
+}

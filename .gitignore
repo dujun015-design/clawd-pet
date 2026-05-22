@@ -39,3 +39,8 @@ tutorial-video/public/gif-orig/
 tutorial-video/out/
 tutorial-video/raw-clips/*.mp4
 tutorial-video/recordings/
+
+# Release zip artifacts (太大，从 GitHub Releases 走)
+releases/
+tutorial-video/voiceover/wavs/
+tutorial-video/voiceover/full-narration.wav
