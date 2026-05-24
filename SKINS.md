@@ -29,6 +29,8 @@
 **内置皮肤**：
 - `clawd` — 默认 Clawd 螃蟹（全状态）
 - `clawd-mini` — 迷你版（部分状态，缺失状态自动回退到 idle）
+- `pixel-dog` — CC0 像素小狗，含坐下、看、叫、走路等 GIF 动作
+- `pixel-cat` — CC0 像素小猫，含走路、跑步 GIF 动作
 
 重启 Clawd 生效。
 

@@ -12,12 +12,16 @@
       -webkit-app-region: no-drag;
     }
 
+    :root {
+      --pet-size: 110px;     /* 桌宠主体尺寸，改这里就行 */
+    }
+
     #pet-wrap {
       position: absolute;
       top: 0;
       left: 0;
-      width: 140px;
-      height: 140px;
+      width: var(--pet-size);
+      height: var(--pet-size);
       will-change: transform;
       cursor: grab;
       user-select: none;
@@ -25,8 +29,8 @@
     #pet-wrap.dragging { cursor: grabbing; }
 
     #pet {
-      width: 140px;
-      height: 140px;
+      width: var(--pet-size);
+      height: var(--pet-size);
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       display: block;
@@ -34,78 +38,185 @@
       pointer-events: auto;
     }
 
+    /* ============================================================
+       STATIC SKIN ANIMATIONS — 静态图片皮肤的"假装活着"效果
+       每个状态都有独立性格的运动 + 配套粒子/表情/光效叠加
+       ============================================================ */
     #pet.static-skin {
       image-rendering: auto;
       object-fit: contain;
-      transform-origin: 50% 78%;
-      filter: drop-shadow(0 8px 8px rgba(0,0,0,0.18));
+      transform-origin: 50% 88%;
+      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.15));
     }
+
+    /* 地面阴影 —— 跟着 pet 一起呼吸/跳，营造立体感 */
+    #pet-shadow {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      width: 80px;
+      height: 12px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0) 70%);
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: -1;
+      display: none;
+    }
+    #pet-wrap.static-mode #pet-shadow { display: block; }
+
+    /* 粒子/表情层 —— 飘 Z、♪、💢、✨ 等小图案 */
+    #pet-fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .fx-particle {
+      position: absolute;
+      font-size: 22px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+      will-change: transform, opacity;
+      animation: fx-float 1.8s ease-out infinite;
+    }
+    @keyframes fx-float {
+      0% {
+        transform: translate(0, 0) scale(0.6) rotate(-8deg);
+        opacity: 0;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--fx-dx, 30px), -70px) scale(1.1) rotate(15deg);
+        opacity: 0;
+      }
+    }
+
+    /* ── IDLE / 待机：缓慢呼吸 ── */
     #pet.static-skin.state-idle,
     #pet.static-skin.state-peek,
     #pet.static-skin.state-reading,
     #pet.static-skin.state-notification {
-      animation: pet-breathe 2.6s ease-in-out infinite;
+      animation: pet-breathe 3.6s ease-in-out infinite;
     }
-    #pet.static-skin.state-typing,
-    #pet.static-skin.state-thinking,
+    @keyframes pet-breathe {
+      0%, 100% { transform: translateY(0) scaleY(1) scaleX(1); }
+      50%      { transform: translateY(-3px) scaleY(1.025) scaleX(0.985); }
+    }
+
+    /* ── TYPING / 敲键盘：左右快速颤抖（不上下！） ── */
+    #pet.static-skin.state-typing {
+      animation: pet-typing 0.12s ease-in-out infinite alternate;
+    }
+    @keyframes pet-typing {
+      0%   { transform: translateX(-1.5px) translateY(0); }
+      100% { transform: translateX(1.5px) translateY(-1px); }
+    }
+
+    /* ── THINKING / 思考：缓慢左右轻摆 + 微缩 ── */
+    #pet.static-skin.state-thinking {
+      animation: pet-think 2.4s ease-in-out infinite;
+    }
+    @keyframes pet-think {
+      0%, 100% { transform: rotate(-3deg) scale(0.99); }
+      50%      { transform: rotate(3deg)  scale(1.01); }
+    }
+
+    /* ── BUILDING / 创意：节奏感的小跳跃 ── */
     #pet.static-skin.state-building,
     #pet.static-skin.state-debugger,
     #pet.static-skin.state-sweeping,
     #pet.static-skin.state-carrying,
     #pet.static-skin.state-juggling {
-      animation: pet-work 0.7s ease-in-out infinite;
-    }
-    #pet.static-skin.state-happy,
-    #pet.static-skin.state-jump {
-      animation: pet-jump 0.8s cubic-bezier(.2,.8,.2,1) infinite;
-    }
-    #pet.static-skin.state-groove,
-    #pet.static-skin.state-conducting,
-    #pet.static-skin.state-walk {
-      animation: pet-groove 0.9s ease-in-out infinite;
-    }
-    #pet.static-skin.state-annoyed,
-    #pet.static-skin.state-error,
-    #pet.static-skin.state-alert {
-      animation: pet-shake 0.28s linear infinite;
-    }
-    #pet.static-skin.state-sleeping {
-      animation: pet-sleep 3.2s ease-in-out infinite;
-      opacity: 0.95;
-    }
-
-    @keyframes pet-breathe {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-6px) scale(1.03); }
+      animation: pet-work 0.6s cubic-bezier(.4,0,.4,1) infinite;
     }
     @keyframes pet-work {
-      0%, 100% { transform: translateY(0) rotate(-1deg); }
-      50% { transform: translateY(-3px) rotate(1deg); }
+      0%, 100% { transform: translateY(0)    rotate(-2deg); }
+      50%      { transform: translateY(-6px) rotate(2deg); }
+    }
+
+    /* ── HAPPY / JUMP：squash & stretch 卡通跳 ── */
+    #pet.static-skin.state-happy,
+    #pet.static-skin.state-jump {
+      animation: pet-jump 0.7s cubic-bezier(.34,1.56,.64,1) infinite;
     }
     @keyframes pet-jump {
-      0%, 100% { transform: translateY(0) scale(1); }
-      45% { transform: translateY(-18px) scale(1.06); }
-      70% { transform: translateY(2px) scale(0.98); }
+      0%   { transform: translateY(0)    scaleY(1)    scaleX(1); }
+      15%  { transform: translateY(2px)  scaleY(0.85) scaleX(1.15); }  /* 蹲（squash）*/
+      45%  { transform: translateY(-26px) scaleY(1.12) scaleX(0.92); } /* 升空（stretch）*/
+      80%  { transform: translateY(3px)  scaleY(0.92) scaleX(1.08); }  /* 落地缓冲 */
+      100% { transform: translateY(0)    scaleY(1)    scaleX(1); }
+    }
+
+    /* ── GROOVE / 跳舞：节奏切换左右倾斜 + 升降 ── */
+    #pet.static-skin.state-groove {
+      animation: pet-groove 0.55s ease-in-out infinite;
     }
     @keyframes pet-groove {
-      0%, 100% { transform: translateY(0) rotate(-5deg); }
-      50% { transform: translateY(-7px) rotate(5deg); }
+      0%   { transform: translateY(0)    rotate(-8deg) scale(1); }
+      25%  { transform: translateY(-10px) rotate(0deg)  scale(1.05); }
+      50%  { transform: translateY(0)    rotate(8deg)  scale(1); }
+      75%  { transform: translateY(-10px) rotate(0deg)  scale(1.05); }
+      100% { transform: translateY(0)    rotate(-8deg) scale(1); }
     }
-    @keyframes pet-shake {
-      0%, 100% { transform: translateX(0) rotate(0); }
-      25% { transform: translateX(-3px) rotate(-3deg); }
-      75% { transform: translateX(3px) rotate(3deg); }
+
+    /* ── CONDUCTING / 指挥：大幅左右挥 ── */
+    #pet.static-skin.state-conducting {
+      animation: pet-conduct 0.7s ease-in-out infinite;
+    }
+    @keyframes pet-conduct {
+      0%, 100% { transform: rotate(-12deg) translateX(-4px); }
+      50%      { transform: rotate(12deg)  translateX(4px); }
+    }
+
+    /* ── WALK / 走路：交替倾斜 + 小步上下 ── */
+    #pet.static-skin.state-walk {
+      animation: pet-walk 0.45s steps(2) infinite;
+    }
+    @keyframes pet-walk {
+      0%   { transform: translateY(0) rotate(-4deg); }
+      50%  { transform: translateY(-2px) rotate(4deg); }
+      100% { transform: translateY(0) rotate(-4deg); }
+    }
+
+    /* ── ANNOYED：高频抖 + 略向后仰 ── */
+    #pet.static-skin.state-annoyed {
+      animation: pet-annoyed 0.08s linear infinite alternate;
+      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.15)) hue-rotate(-15deg) saturate(1.2);
+    }
+    @keyframes pet-annoyed {
+      0%   { transform: translateX(-3px) rotate(-4deg); }
+      100% { transform: translateX(3px)  rotate(4deg); }
+    }
+
+    /* ── ERROR / ALERT：警觉式抖动 + 红色 tint ── */
+    #pet.static-skin.state-error,
+    #pet.static-skin.state-alert {
+      animation: pet-alert 0.15s linear infinite;
+      filter: drop-shadow(0 6px 6px rgba(220,30,30,0.4)) saturate(0.8) brightness(1.05);
+    }
+    @keyframes pet-alert {
+      0%, 100% { transform: translate(0, 0)     scale(1); }
+      25%      { transform: translate(-2px, -1px) scale(1.03); }
+      75%      { transform: translate(2px,  -1px) scale(1.03); }
+    }
+
+    /* ── SLEEPING：极慢呼吸 + 略向一侧倒 + 整体压暗 ── */
+    #pet.static-skin.state-sleeping {
+      animation: pet-sleep 4s ease-in-out infinite;
+      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.15)) brightness(0.85) saturate(0.85);
     }
     @keyframes pet-sleep {
-      0%, 100% { transform: translateY(0) rotate(-2deg) scale(0.98); }
-      50% { transform: translateY(3px) rotate(2deg) scale(1); }
+      0%, 100% { transform: rotate(-8deg) translateY(2px) scaleY(0.98); }
+      50%      { transform: rotate(-6deg) translateY(0)   scaleY(1.02); }
     }
 
     /* Status dot — appears in lower-right corner of the crab's body */
     #status-dot {
       position: absolute;
-      bottom: 24px;
-      right: 38px;
+      bottom: 18px;
+      right: 28px;
       width: 8px;
       height: 8px;
       border-radius: 50%;
@@ -126,7 +237,7 @@
     /* Speech bubble — sits above the crab */
     #bubble {
       position: absolute;
-      bottom: 88px;
+      bottom: 70px;
       left: 50%;
       transform: translateX(-50%);
       background: #fff;
@@ -166,8 +277,10 @@
 <body>
   <div id="pet-wrap">
     <div id="bubble"></div>
+    <div id="pet-shadow"></div>
     <img id="pet" src="assets/gif/clawd-idle.gif" draggable="false" alt="Clawd">
     <div id="status-dot"></div>
+    <div id="pet-fx"></div>
   </div>
   <script src="renderer.js"></script>
 </body>
