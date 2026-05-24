@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron')
+const { app, BrowserWindow, ipcMain, screen, Menu, shell } = require('electron')
 const { exec } = require('child_process')
 const fs = require('fs')
 const path = require('path')
@@ -163,23 +163,39 @@ ipcMain.on('set-ignore', (_, ignore) => {
   }
 })
 
-ipcMain.on('open-chat', () => {
+function openChatWindow() {
   if (chatWin && !chatWin.isDestroyed()) {
+    chatWin.show()
+    chatWin.moveTop()
     chatWin.focus()
     return
   }
+  // 算个不挡 Clawd 的位置：在主屏中间靠左
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
+  const W = 420, H = 520
+  const x = Math.max(40, Math.floor((sw - W) / 2 - 100))
+  const y = Math.max(40, Math.floor((sh - H) / 2))
+
   chatWin = new BrowserWindow({
-    width: 420,
-    height: 520,
+    width: W,
+    height: H,
+    x, y,
     frame: true,
+    show: false,            // 等准备好再 show，避免闪烁
     alwaysOnTop: true,
-    titleBarStyle: 'hiddenInset',
+    skipTaskbar: false,     // 任务栏要显示，方便 Windows 用户找
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
   })
   chatWin.loadFile('chat.html')
+  chatWin.once('ready-to-show', () => {
+    chatWin.show()
+    chatWin.moveTop()
+    chatWin.focus()
+  })
 
   // Cmd+Alt+I (mac) / Ctrl+Shift+I (win/linux) 打开 DevTools
   chatWin.webContents.on('before-input-event', (e, input) => {
@@ -195,8 +211,56 @@ ipcMain.on('open-chat', () => {
       try { currentStream.controller.abort() } catch (_) {}
       currentStream = null
     }
+    chatWin = null
     setStatus('idle', '闲着呢~')
   })
+}
+
+ipcMain.on('open-chat', openChatWindow)
+
+// 右键菜单
+ipcMain.on('show-context-menu', () => {
+  const template = [
+    {
+      label: '💬 打开聊天',
+      click: openChatWindow,
+    },
+    {
+      label: '🦀 回到右下角',
+      click: () => {
+        if (mainWin && !mainWin.isDestroyed()) {
+          mainWin.webContents.send('reset-position')
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '📦 查看 GitHub 仓库',
+      click: () => shell.openExternal('https://github.com/dujun015-design/clawd-pet'),
+    },
+    {
+      label: 'ℹ️ 关于 Clawd',
+      click: () => {
+        const { dialog } = require('electron')
+        dialog.showMessageBox({
+          type: 'info',
+          title: 'Clawd 桌宠',
+          message: 'Clawd 桌宠 v1.0.0',
+          detail:
+            'AI 桌面宠物，支持 9 种大模型。\n\n' +
+            'Clawd 角色 © Anthropic\n' +
+            '动画素材 © clawd-on-desk (AGPL-3.0)\n' +
+            '本项目代码：MIT License',
+        })
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '退出 Clawd',
+      role: 'quit',
+    },
+  ]
+  Menu.buildFromTemplate(template).popup()
 })
 
 ipcMain.on('send-prompt', async (event, { prompt, history }) => {

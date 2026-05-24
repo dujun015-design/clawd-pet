@@ -46,6 +46,12 @@ let dragStartMX = 0, dragStartMY = 0
 let dragStartPX = 0, dragStartPY = 0
 
 pet.addEventListener('pointerdown', (e) => {
+  // 右键单独处理 → 弹原生菜单
+  if (e.button === 2) {
+    e.preventDefault()
+    ipcRenderer.send('show-context-menu')
+    return
+  }
   if (e.button !== 0) return
   try { pet.setPointerCapture(e.pointerId) } catch (_) {}
   activePointerId = e.pointerId
@@ -100,13 +106,24 @@ let petLocked = false
 
 function handleClick() {
   setState('happy')
+  // 别 lock 太久，让对话框立刻能弹出来
   petLocked = true
   setTimeout(() => {
     petLocked = false
-    setState('idle')
-  }, 1200)
+    if (currentState === 'happy') setState('idle')
+  }, 800)
   ipcRenderer.send('open-chat')
 }
+
+// 防止浏览器自带的 contextmenu 抢菜单
+pet.addEventListener('contextmenu', (e) => e.preventDefault())
+window.addEventListener('contextmenu', (e) => e.preventDefault())
+
+// 主进程让我们回到右下角
+ipcRenderer.on('reset-position', () => {
+  setPetPos(screenW - PET_W - 20, screenH - PET_H - 40)
+  showBubble('我回来啦 ✋', 1500)
+})
 
 // Track click count for hidden reactions
 let clickCount = 0

@@ -75,7 +75,8 @@ VIDEO_IN="$VOICE_DIR/../out/tutorial-v2.mp4"
 VIDEO_OUT="$VOICE_DIR/../out/tutorial-v2-narrated.mp4"
 
 ffmpeg -y -i "$VIDEO_IN" -i "$VOICE_DIR/full-narration.wav" \
-  -c:v copy -c:a aac -b:a 192k -shortest \
+  -map 0:v:0 -map 1:a:0 \
+  -c:v copy -c:a aac -b:a 192k -ac 2 -ar 44100 -shortest \
   "$VIDEO_OUT" 2>&1 | tail -3
 
 echo ""
