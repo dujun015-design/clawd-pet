@@ -7,17 +7,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SKINS_DIR="$ROOT/assets/skins"
 SRC="/tmp/shepardskin-zips"
 
-# 缩放 + 居中到 110x110，pixel-perfect
+# 缩放 + 居中到 110x110，自动抠四角 sentinel 背景色（Shepardskin 用 magenta/yellow）
+PYCONV="$(dirname "$0")/_convert_skin_gif.py"
 convert_gif() {
   local input="$1"
   local output="$2"
-  ffmpeg -y -i "$input" -vf "\
-scale='if(gt(iw,ih),100,-1)':'if(gt(iw,ih),-1,100)':flags=neighbor,\
-pad=110:110:(110-iw)/2:(110-ih)/2:color=0x00000000,\
-split[a][b];\
-[a]palettegen=reserve_transparent=1[p];\
-[b][p]paletteuse=alpha_threshold=128" \
-    "$output" 2>/dev/null
+  python3 "$PYCONV" "$input" "$output" 110 2>/dev/null
 }
 
 # ── Chicken 🐔 ──
