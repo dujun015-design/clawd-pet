@@ -43,6 +43,9 @@
        每个状态都有独立性格的运动 + 配套粒子/表情/光效叠加
        ============================================================ */
     #pet.static-skin {
+      width: 112px;
+      height: 112px;
+      margin: 14px;
       image-rendering: auto;
       object-fit: contain;
       transform-origin: 50% 88%;
@@ -52,10 +55,10 @@
     /* 地面阴影 —— 跟着 pet 一起呼吸/跳，营造立体感 */
     #pet-shadow {
       position: absolute;
-      bottom: 4px;
+      bottom: 12px;
       left: 50%;
-      width: 80px;
-      height: 12px;
+      width: 62px;
+      height: 9px;
       border-radius: 50%;
       background: radial-gradient(ellipse at center, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0) 70%);
       transform: translateX(-50%);
@@ -65,33 +68,7 @@
     }
     #pet-wrap.static-mode #pet-shadow { display: block; }
 
-    /* 粒子/表情层 —— 飘 Z、♪、💢、✨ 等小图案 */
-    #pet-fx {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      overflow: visible;
-    }
-    .fx-particle {
-      position: absolute;
-      font-size: 22px;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
-      will-change: transform, opacity;
-      animation: fx-float 1.8s ease-out infinite;
-    }
-    @keyframes fx-float {
-      0% {
-        transform: translate(0, 0) scale(0.6) rotate(-8deg);
-        opacity: 0;
-      }
-      20% {
-        opacity: 1;
-      }
-      100% {
-        transform: translate(var(--fx-dx, 30px), -70px) scale(1.1) rotate(15deg);
-        opacity: 0;
-      }
-    }
+    /* NOTE: 粒子层 (#pet-fx / .fx-particle) 已移除，太密会遮主体 */
 
     /* ── IDLE / 待机：缓慢呼吸 ── */
     #pet.static-skin.state-idle,
@@ -280,7 +257,6 @@
     <div id="pet-shadow"></div>
     <img id="pet" src="assets/gif/clawd-idle.gif" draggable="false" alt="Clawd">
     <div id="status-dot"></div>
-    <div id="pet-fx"></div>
   </div>
   <script src="renderer.js"></script>
 </body>

@@ -31,65 +31,14 @@ setPetPos(petX, petY)
 
 let currentState = 'idle'
 let isStaticMode = false
-const fxLayer = document.getElementById('pet-fx')
 
-// 每个状态对应的飘字粒子（emoji）+ 节奏（ms）+ 横向偏移基准
-const FX_BY_STATE = {
-  sleeping: { glyphs: ['Z', 'z', '💤'], everyMs: 900,  spread: 36, baseY: 30 },
-  typing:   { glyphs: ['⌨','tap','tap'], everyMs: 250, spread: 60, baseY: 60 },
-  thinking: { glyphs: ['?', '…', '💭'], everyMs: 700,  spread: 30, baseY: 20 },
-  groove:   { glyphs: ['♪', '♫', '🎵'], everyMs: 320,  spread: 70, baseY: 40 },
-  conducting:{ glyphs: ['♪', '♫'],      everyMs: 360,  spread: 70, baseY: 40 },
-  happy:    { glyphs: ['✨','💖','⭐'], everyMs: 350,  spread: 60, baseY: 30 },
-  jump:     { glyphs: ['✨','🎉'],       everyMs: 220,  spread: 80, baseY: 30 },
-  annoyed:  { glyphs: ['💢','💢','😤'], everyMs: 280,  spread: 50, baseY: 20 },
-  error:    { glyphs: ['❗','💢'],       everyMs: 260,  spread: 50, baseY: 20 },
-  alert:    { glyphs: ['❗','⚠️'],        everyMs: 280,  spread: 40, baseY: 20 },
-  reading:  { glyphs: ['📖','✏️'],       everyMs: 1100, spread: 40, baseY: 30 },
-  building: { glyphs: ['🔨','⚙️','🛠'],  everyMs: 500,  spread: 50, baseY: 30 },
-  notification:{ glyphs: ['🔔'],         everyMs: 800,  spread: 30, baseY: 20 },
-}
-
-let fxTimer = null
-function stopFx() {
-  if (fxTimer) { clearInterval(fxTimer); fxTimer = null }
-  // 让已有粒子自然消失（CSS 动画走完）
-}
-
-function spawnFxParticle(glyph, spread, baseY) {
-  const el = document.createElement('div')
-  el.className = 'fx-particle'
-  el.textContent = glyph
-  // 粒子从 pet 上方某个位置出发
-  const startX = 30 + (Math.random() - 0.5) * spread
-  const endDx  = (Math.random() - 0.5) * 40
-  el.style.left = `${startX}px`
-  el.style.top  = `${baseY}px`
-  el.style.setProperty('--fx-dx', `${endDx}px`)
-  el.style.animationDuration = `${1.4 + Math.random() * 0.6}s`
-  fxLayer.appendChild(el)
-  // 动画结束清理
-  el.addEventListener('animationend', () => el.remove(), { once: true })
-}
-
-function startFx(state) {
-  stopFx()
-  if (!isStaticMode) return  // 只对静态皮肤吐表情
-  const cfg = FX_BY_STATE[state]
-  if (!cfg) return
-  // 先吐一个，再周期性吐
-  spawnFxParticle(cfg.glyphs[0], cfg.spread, cfg.baseY)
-  fxTimer = setInterval(() => {
-    const g = cfg.glyphs[Math.floor(Math.random() * cfg.glyphs.length)]
-    spawnFxParticle(g, cfg.spread, cfg.baseY)
-  }, cfg.everyMs)
-}
+// NOTE: 粒子/飘字效果（FX）已移除 —— 用户觉得 tap tap / 星星 太密会遮住主体
+// 如果想加回来，请确保默认关闭，做成用户可选开关
 
 function setPetMotionClass(name, file) {
   const cleanPath = file.split('?')[0].toLowerCase()
   isStaticMode = !cleanPath.endsWith('.gif')
   pet.className = isStaticMode ? `static-skin state-${name}` : ''
-  // 切换粒子层模式 class
   wrap.classList.toggle('static-mode', isStaticMode)
 }
 
@@ -99,7 +48,6 @@ function setState(name) {
   if (currentState === name && pet.src) return
   currentState = name
   setPetMotionClass(name, file)
-  startFx(name)
   // Setting src to empty then to new value forces GIF to restart from frame 0
   // file:// 前缀，绕开 packaged asar 路径问题
   pet.src = ''
