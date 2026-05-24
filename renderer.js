@@ -11,8 +11,8 @@ const { screenW, screenH } = initData
 let ANIMATIONS = initData.animations
 
 // 跟 index.html 的 --pet-size CSS 变量保持一致
-const PET_W = 110
-const PET_H = 110
+const PET_W = 130
+const PET_H = 130
 
 // Default position: bottom-right corner
 let petX = screenW - PET_W - 20
