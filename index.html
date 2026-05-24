@@ -34,6 +34,73 @@
       pointer-events: auto;
     }
 
+    #pet.static-skin {
+      image-rendering: auto;
+      object-fit: contain;
+      transform-origin: 50% 78%;
+      filter: drop-shadow(0 8px 8px rgba(0,0,0,0.18));
+    }
+    #pet.static-skin.state-idle,
+    #pet.static-skin.state-peek,
+    #pet.static-skin.state-reading,
+    #pet.static-skin.state-notification {
+      animation: pet-breathe 2.6s ease-in-out infinite;
+    }
+    #pet.static-skin.state-typing,
+    #pet.static-skin.state-thinking,
+    #pet.static-skin.state-building,
+    #pet.static-skin.state-debugger,
+    #pet.static-skin.state-sweeping,
+    #pet.static-skin.state-carrying,
+    #pet.static-skin.state-juggling {
+      animation: pet-work 0.7s ease-in-out infinite;
+    }
+    #pet.static-skin.state-happy,
+    #pet.static-skin.state-jump {
+      animation: pet-jump 0.8s cubic-bezier(.2,.8,.2,1) infinite;
+    }
+    #pet.static-skin.state-groove,
+    #pet.static-skin.state-conducting,
+    #pet.static-skin.state-walk {
+      animation: pet-groove 0.9s ease-in-out infinite;
+    }
+    #pet.static-skin.state-annoyed,
+    #pet.static-skin.state-error,
+    #pet.static-skin.state-alert {
+      animation: pet-shake 0.28s linear infinite;
+    }
+    #pet.static-skin.state-sleeping {
+      animation: pet-sleep 3.2s ease-in-out infinite;
+      opacity: 0.95;
+    }
+
+    @keyframes pet-breathe {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-6px) scale(1.03); }
+    }
+    @keyframes pet-work {
+      0%, 100% { transform: translateY(0) rotate(-1deg); }
+      50% { transform: translateY(-3px) rotate(1deg); }
+    }
+    @keyframes pet-jump {
+      0%, 100% { transform: translateY(0) scale(1); }
+      45% { transform: translateY(-18px) scale(1.06); }
+      70% { transform: translateY(2px) scale(0.98); }
+    }
+    @keyframes pet-groove {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-7px) rotate(5deg); }
+    }
+    @keyframes pet-shake {
+      0%, 100% { transform: translateX(0) rotate(0); }
+      25% { transform: translateX(-3px) rotate(-3deg); }
+      75% { transform: translateX(3px) rotate(3deg); }
+    }
+    @keyframes pet-sleep {
+      0%, 100% { transform: translateY(0) rotate(-2deg) scale(0.98); }
+      50% { transform: translateY(3px) rotate(2deg) scale(1); }
+    }
+
     /* Status dot — appears in lower-right corner of the crab's body */
     #status-dot {
       position: absolute;

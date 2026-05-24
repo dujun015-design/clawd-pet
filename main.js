@@ -5,6 +5,7 @@ const path = require('path')
 const os = require('os')
 const Anthropic = require('@anthropic-ai/sdk')
 const OpenAI = require('openai')
+const { pickReply } = require('./demo-responses')
 
 let mainWin, chatWin
 let currentStream = null
@@ -24,12 +25,14 @@ const PROVIDER_PRESETS = {
   ollama:     { type: 'openai', baseURL: 'http://localhost:11434/v1',                defaultModel: 'llama3.2', apiKey: 'ollama' },
 }
 
+const CONFIG_PATH = path.join(os.homedir(), '.clawd-config.json')
+const SKIN_IMAGE_EXTS = ['.gif', '.png', '.jpg', '.jpeg', '.webp']
+
 // Read ~/.clawd-config.json, falling back to ~/.anthropic_key for backward compat
 function loadConfig() {
-  const configPath = path.join(os.homedir(), '.clawd-config.json')
-  if (fs.existsSync(configPath)) {
+  if (fs.existsSync(CONFIG_PATH)) {
     try {
-      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+      const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
       const preset = PROVIDER_PRESETS[cfg.provider] || {}
       return {
         provider: cfg.provider || 'anthropic',
@@ -60,7 +63,7 @@ function loadConfig() {
   return null
 }
 
-const config = loadConfig()
+let config = loadConfig()
 let client = null
 if (config && config.apiKey) {
   if (config.type === 'anthropic') {
@@ -125,7 +128,15 @@ function resolveSkinPath(skinName) {
   return fallback
 }
 
-// 扫描 skin 目录，缺失状态自动 fallback 到 idle.gif
+function findSkinImage(skinPath, state) {
+  for (const ext of SKIN_IMAGE_EXTS) {
+    const file = path.join(skinPath, `${state}${ext}`)
+    if (fs.existsSync(file)) return file
+  }
+  return null
+}
+
+// 扫描 skin 目录，缺失状态自动 fallback 到 idle 图片
 function scanSkin(skinPath) {
   const STATES = [
     'idle', 'reading', 'typing', 'thinking', 'building', 'debugger',
@@ -134,26 +145,141 @@ function scanSkin(skinPath) {
     'walk', 'peek', 'alert',
   ]
   const result = {}
-  const idleFile = path.join(skinPath, 'idle.gif')
-  const idleExists = fs.existsSync(idleFile)
+  const idleFile = findSkinImage(skinPath, 'idle')
   for (const state of STATES) {
-    const file = path.join(skinPath, `${state}.gif`)
-    if (fs.existsSync(file)) result[state] = file
-    else if (idleExists)    result[state] = idleFile
+    const file = findSkinImage(skinPath, state)
+    if (file) result[state] = file
+    else if (idleFile) result[state] = idleFile
   }
   return result
 }
 
+function readManifest(skinPath) {
+  const manifestPath = path.join(skinPath, 'manifest.json')
+  if (!fs.existsSync(manifestPath)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  } catch (e) {
+    console.warn(`[Clawd] failed to parse skin manifest: ${manifestPath}`, e.message)
+    return {}
+  }
+}
+
+function skinEntry(name, skinPath, source) {
+  const manifest = readManifest(skinPath)
+  return {
+    name,
+    label: manifest.name || name,
+    description: manifest.description || '',
+    source,
+    path: skinPath,
+  }
+}
+
+function listSkinEntries(dir, source) {
+  if (!fs.existsSync(dir)) return []
+  return fs.readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const skinPath = path.join(dir, entry.name)
+      if (!findSkinImage(skinPath, 'idle')) return null
+      return skinEntry(entry.name, skinPath, source)
+    })
+    .filter(Boolean)
+}
+
+function listAvailableSkins() {
+  const builtinDir = path.join(__dirname, 'assets', 'skins')
+  const userDir = path.join(os.homedir(), '.clawd', 'skins')
+  return [
+    ...listSkinEntries(builtinDir, '内置'),
+    ...listSkinEntries(userDir, '用户'),
+  ]
+}
+
+function skinPayload(skinName) {
+  const skinPath = resolveSkinPath(skinName)
+  const manifest = readManifest(skinPath)
+  const animations = scanSkin(skinPath)
+  return {
+    skinPath,
+    skinName: path.basename(skinPath),
+    skinLabel: manifest.name || path.basename(skinPath),
+    animations,
+  }
+}
+
+function saveConfigSkin(skinName) {
+  let raw = {}
+  if (fs.existsSync(CONFIG_PATH)) {
+    try {
+      raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
+    } catch (e) {
+      console.warn('[Clawd] failed to update config skin:', e.message)
+      return false
+    }
+  }
+  raw.skin = skinName
+  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(raw, null, 2)}\n`)
+  config = loadConfig()
+  return true
+}
+
+function switchSkin(skinName) {
+  if (!saveConfigSkin(skinName)) return
+  const payload = skinPayload(config?.skin)
+  console.log(`[Clawd] switched skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
+  if (mainWin && !mainWin.isDestroyed()) {
+    mainWin.webContents.send('skin-update', payload)
+  }
+}
+
+function safeSkinName(name) {
+  const base = path.parse(name).name
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return base || `custom-${Date.now()}`
+}
+
+async function importImageSkin() {
+  const { dialog } = require('electron')
+  const result = await dialog.showOpenDialog({
+    title: '选择一张图片或 GIF 做皮肤',
+    properties: ['openFile'],
+    filters: [
+      { name: '图片', extensions: ['gif', 'png', 'jpg', 'jpeg', 'webp'] },
+    ],
+  })
+  if (result.canceled || !result.filePaths.length) return
+
+  const sourcePath = result.filePaths[0]
+  const ext = path.extname(sourcePath).toLowerCase()
+  if (!SKIN_IMAGE_EXTS.includes(ext)) return
+
+  const userSkinDir = path.join(os.homedir(), '.clawd', 'skins')
+  const skinName = `${safeSkinName(sourcePath)}-${Date.now()}`
+  const skinPath = path.join(userSkinDir, skinName)
+  fs.mkdirSync(skinPath, { recursive: true })
+  fs.copyFileSync(sourcePath, path.join(skinPath, `idle${ext}`))
+  fs.writeFileSync(path.join(skinPath, 'manifest.json'), `${JSON.stringify({
+    name: path.parse(sourcePath).name,
+    description: '从本地图片导入的自定义皮肤',
+    author: os.userInfo().username,
+    version: '1.0.0',
+  }, null, 2)}\n`)
+
+  switchSkin(skinName)
+}
+
 ipcMain.on('init', (event) => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  const skinPath = resolveSkinPath(config?.skin)
-  const animations = scanSkin(skinPath)
-  console.log(`[Clawd] skin: ${path.basename(skinPath)} (${Object.keys(animations).length} states)`)
+  const payload = skinPayload(config?.skin)
+  console.log(`[Clawd] skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
   event.returnValue = {
     screenW: width,
     screenH: height,
-    skinPath,
-    animations,
+    ...payload,
   }
 })
 
@@ -220,6 +346,13 @@ ipcMain.on('open-chat', openChatWindow)
 
 // 右键菜单
 ipcMain.on('show-context-menu', () => {
+  const currentSkinPath = resolveSkinPath(config?.skin)
+  const skinItems = listAvailableSkins().map((skin) => ({
+    label: `${skin.label} (${skin.source})`,
+    type: 'radio',
+    checked: path.resolve(skin.path) === path.resolve(currentSkinPath),
+    click: () => switchSkin(skin.name),
+  }))
   const template = [
     {
       label: '💬 打开聊天',
@@ -232,6 +365,17 @@ ipcMain.on('show-context-menu', () => {
           mainWin.webContents.send('reset-position')
         }
       },
+    },
+    {
+      label: '🎨 换装',
+      submenu: [
+        {
+          label: '导入图片做皮肤...',
+          click: importImageSkin,
+        },
+        { type: 'separator' },
+        ...(skinItems.length ? skinItems : [{ label: '没有找到可用皮肤', enabled: false }]),
+      ],
     },
     { type: 'separator' },
     {
@@ -263,10 +407,26 @@ ipcMain.on('show-context-menu', () => {
   Menu.buildFromTemplate(template).popup()
 })
 
+// 演示模式：没 client 时分块"模拟流"返回预设回复
+async function streamDemoReply(event, prompt) {
+  setStatus('thinking', '演示模式 · 思考中...')
+  const text = pickReply(prompt)
+  // 加点思考延迟，假装在用 AI
+  await new Promise((r) => setTimeout(r, 500 + Math.random() * 800))
+  // 一字一字吐出来，模拟流式
+  const chars = Array.from(text)
+  for (const ch of chars) {
+    event.reply('stream-chunk', ch)
+    await new Promise((r) => setTimeout(r, 25 + Math.random() * 35))
+  }
+  event.reply('stream-done')
+  setStatus('done', '演示回复完了 ✓')
+  setTimeout(() => setStatus('idle', '闲着呢~ (演示模式)'), 3000)
+}
+
 ipcMain.on('send-prompt', async (event, { prompt, history }) => {
   if (!client) {
-    event.reply('stream-error', '没配置 API key。详见 ~/.clawd-config.json 配置说明')
-    return
+    return streamDemoReply(event, prompt)
   }
   setStatus('thinking', '思考中...')
   try {

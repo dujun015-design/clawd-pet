@@ -6,6 +6,16 @@
 
 ## 切换内置皮肤
 
+### 方式 A：右键换装
+
+运行 Clawd 后，右键桌宠，打开 **换装** 菜单，直接选择想用的皮肤。
+
+选择后会写入 `~/.clawd-config.json`，并立即切换，不需要重启。
+
+也可以点 **导入图片做皮肤...**，选择一张 `png` / `jpg` / `webp` / `gif`。Clawd 会自动复制到 `~/.clawd/skins/`，生成一个自定义皮肤并立即换上。
+
+### 方式 B：手动配置
+
 编辑 `~/.clawd-config.json`，加 `skin` 字段：
 
 ```json
@@ -33,7 +43,7 @@
 ```
 my-cat-skin/
 ├── manifest.json     (可选，描述信息)
-├── idle.gif          (必需！其他状态可缺失)
+├── idle.gif          (必需！也可以是 idle.png / idle.jpg / idle.webp)
 ├── typing.gif        (可选)
 ├── thinking.gif      (可选)
 ├── happy.gif         (可选)

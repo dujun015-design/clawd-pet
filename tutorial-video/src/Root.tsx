@@ -8,6 +8,7 @@ import { CloneCard } from './scenes/CloneCard';
 import { ConfigCard } from './scenes/ConfigCard';
 import { PrepareCard } from './scenes/PrepareCard';
 import { TutorialV2 } from './TutorialV2';
+import { Poster } from './scenes/Poster';
 import { TutorialVideo } from './TutorialVideo';
 
 // 抖音/小红书 竖屏 9:16
@@ -111,6 +112,16 @@ export const Root: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
+      />
+
+      {/* 小红书安装海报（单帧 1242×1656，3:4 竖图）*/}
+      <Composition
+        id="Poster"
+        component={Poster}
+        durationInFrames={1}
+        fps={30}
+        width={1242}
+        height={1656}
       />
 
       {/* 皮肤系统演示（18秒）—— 抖音/小红书短视频 */}

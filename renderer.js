@@ -6,7 +6,9 @@ const wrap = document.getElementById('pet-wrap')
 const bubble = document.getElementById('bubble')
 const dot = document.getElementById('status-dot')
 
-const { screenW, screenH, animations: ANIMATIONS } = ipcRenderer.sendSync('init')
+const initData = ipcRenderer.sendSync('init')
+const { screenW, screenH } = initData
+let ANIMATIONS = initData.animations
 
 const PET_W = 140
 const PET_H = 140
@@ -28,11 +30,18 @@ setPetPos(petX, petY)
 
 let currentState = 'idle'
 
+function setPetMotionClass(name, file) {
+  const cleanPath = file.split('?')[0].toLowerCase()
+  const isStaticSkin = !cleanPath.endsWith('.gif')
+  pet.className = isStaticSkin ? `static-skin state-${name}` : ''
+}
+
 function setState(name) {
-  if (currentState === name) return
   const file = ANIMATIONS[name]
   if (!file) return
+  if (currentState === name && pet.src) return
   currentState = name
+  setPetMotionClass(name, file)
   // Setting src to empty then to new value forces GIF to restart from frame 0
   // file:// 前缀，绕开 packaged asar 路径问题
   pet.src = ''
@@ -123,6 +132,14 @@ window.addEventListener('contextmenu', (e) => e.preventDefault())
 ipcRenderer.on('reset-position', () => {
   setPetPos(screenW - PET_W - 20, screenH - PET_H - 40)
   showBubble('我回来啦 ✋', 1500)
+})
+
+ipcRenderer.on('skin-update', (_, { animations, skinLabel }) => {
+  ANIMATIONS = animations
+  currentState = ''
+  setState('idle')
+  showBubble(`已换装：${skinLabel}`, 1800)
+  resetIdleTimer()
 })
 
 // Track click count for hidden reactions

@@ -269,6 +269,22 @@
     <span id="model-label" class="title-sub">…</span>
   </div>
 
+  <div id="demo-banner" style="
+    display: none;
+    background: linear-gradient(90deg, #fff5ed 0%, #fde6d3 100%);
+    border-bottom: 1px solid #f0d4b0;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #8a4a16;
+    text-align: center;
+    line-height: 1.4;
+    flex-shrink: 0;
+  ">
+    🎭 <strong>演示模式</strong> · 现在的回复是预设的<br>
+    <span style="font-size: 12px; opacity: 0.85;">配置 API Key 后解锁真聊天 → 见
+      <a href="#" id="open-config-doc" style="color: #c46a2f; font-weight: 600;">使用说明</a></span>
+  </div>
+
   <div id="messages">
     <div class="msg claude">
       <div class="bubble-text">你好 👋 想聊点什么？</div>
@@ -309,8 +325,29 @@
     if (provInfo) {
       modelLabel.textContent = `${provInfo.provider} · ${provInfo.model}`
     } else {
-      modelLabel.textContent = '未配置 API'
-      modelLabel.style.color = '#ff453a'
+      // Demo mode — 没配 key
+      modelLabel.textContent = '演示模式'
+      modelLabel.style.color = '#c46a2f'
+      document.getElementById('demo-banner').style.display = 'block'
+      // 替换默认欢迎语
+      const welcome = document.querySelector('.msg.claude .bubble-text')
+      if (welcome) {
+        welcome.innerHTML =
+          '你好 👋 我是 <b>Clawd</b> 🦀<br><br>' +
+          '当前是<b>演示模式</b>，我会用预设回复跟你聊几句。<br>' +
+          '想解锁完整 AI 聊天？给我配个 API Key 就好了～<br><br>' +
+          '<span style="color:#888;font-size:13px;">（1 块钱够聊几千次，详见使用说明）</span>'
+      }
+      // 点击"使用说明"链接 → 用系统浏览器打开 GitHub
+      const link = document.getElementById('open-config-doc')
+      if (link) {
+        link.addEventListener('click', (e) => {
+          e.preventDefault()
+          require('electron').shell.openExternal(
+            'https://github.com/dujun015-design/clawd-pet/blob/main/USAGE_MAC.md'
+          )
+        })
+      }
     }
 
     const history = []
