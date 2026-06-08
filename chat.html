@@ -360,7 +360,7 @@
 </head>
 <body>
   <div id="titlebar">
-    <span id="title-text">Clawd</span>
+    <span id="title-text">桌宠</span>
     <span id="model-label" class="title-sub">…</span>
   </div>
 
@@ -419,6 +419,21 @@
     const inputEl    = document.getElementById('input')
     const sendBtn    = document.getElementById('send')
     const modelLabel = document.getElementById('model-label')
+    const titleTextEl = document.getElementById('title-text')
+
+    // 桌宠名字：启动时拉一次，改名时收广播刷新
+    let petName = 'Clawd'
+    ;(async () => {
+      petName = (await ipcRenderer.invoke('get-pet-name')) || 'Clawd'
+      titleTextEl.textContent = petName
+      // 改名后已经渲染过的 tab 也要刷一下
+      renderTabs(); renderMessages()
+    })()
+    ipcRenderer.on('pet-name-update', (_, name) => {
+      petName = name || 'Clawd'
+      titleTextEl.textContent = petName
+      renderTabs(); renderMessages()
+    })
 
     // Show active provider/model in titlebar
     const provInfo = ipcRenderer.sendSync('get-provider')
@@ -429,15 +444,6 @@
       modelLabel.textContent = '演示模式'
       modelLabel.style.color = '#c46a2f'
       document.getElementById('demo-banner').style.display = 'block'
-      // 替换默认欢迎语
-      const welcome = document.querySelector('.msg.claude .bubble-text')
-      if (welcome) {
-        welcome.innerHTML =
-          '你好 👋 我是 <b>Clawd</b> 🦀<br><br>' +
-          '当前是<b>演示模式</b>，我会用预设回复跟你聊几句。<br>' +
-          '想解锁完整 AI 聊天？给我配个 API Key 就好了～<br><br>' +
-          '<span style="color:#888;font-size:13px;">（1 块钱够聊几千次，详见使用说明）</span>'
-      }
       // 点击"使用说明"链接 → 用系统浏览器打开 GitHub
       const link = document.getElementById('open-config-doc')
       if (link) {
@@ -536,7 +542,7 @@
       if (!tab) { messagesEl.innerHTML = ''; return }
       // 演示模式或新对话欢迎语
       const welcomeHtml = !provInfo
-        ? `<div class="msg claude"><div class="bubble-text">你好 👋 我是 <b>Clawd</b> 🦀<br><br>当前是<b>演示模式</b>，我会用预设回复跟你聊几句。<br>想解锁完整 AI 聊天？给我配个 API Key 就好了～</div></div>`
+        ? `<div class="msg claude"><div class="bubble-text">你好 👋 我是 <b>${escapeHtml(petName)}</b> 🦀<br><br>当前是<b>演示模式</b>，我会用预设回复跟你聊几句。<br>想解锁完整 AI 聊天？给我配个 API Key 就好了～</div></div>`
         : `<div class="msg claude"><div class="bubble-text">你好 👋 想聊点什么？</div></div>`
       const msgs = tab.messages.map((m, i) => {
         const isLastClaude = i === tab.messages.length - 1 && m.role === 'claude' && tab.isStreaming

@@ -1,27 +1,30 @@
 // 演示模式回复库 —— 没配 API Key 时用
 // 用关键词匹配 + 随机兜底，让用户先体验
+//
+// 模板占位符 {{name}} 会在运行时替换成用户设的桌宠名
+// （默认 'Clawd'，用户改名后用新名字）
 
 const KEYWORD_RESPONSES = [
   {
     keywords: ['你好', '您好', 'hi', 'hello', '嗨', '哈喽', 'halo'],
     replies: [
-      '你好呀！我是一只还没充电的小螃蟹 🦀 给我配个 API Key 我就能跟你正经聊天啦~',
+      '你好呀！我是一只还没充电的桌宠 🦀 给我配个 API Key 我就能跟你正经聊天啦~',
       '嗨嗨！演示模式的我只能说几句套话😅 想看完整版？请喂我一个 sk- 开头的密钥',
-      'Hello！我是 **Clawd**。现在的我大脑还没接上电，只能跟你打打招呼。',
+      'Hello！我叫 **{{name}}**。现在的我大脑还没接上电，只能跟你打打招呼。',
     ],
   },
   {
     keywords: ['你是谁', '你叫什么', '你是', '介绍'],
     replies: [
-      '我是 **Clawd** 🦀，Anthropic 家的官方吉祥物螃蟹。被人养在你桌面上，理论上能聊各种话题。\n\n但现在你看到的是**演示模式**——我的大脑还没接通，只能说几句预设的话。配个 DeepSeek API Key（1 块钱）就能解锁真正的我啦！',
-      '小螃蟹 Clawd 上线 🦀\n\n我能：\n- 陪你聊天（需要 API Key）\n- 看你切 app 自动反应 ✅\n- 在桌面卖萌 ✅\n\n大部分技能不要钱，但聊天得有 key 才行～',
+      '我叫 **{{name}}** 🦀，住在你桌面上的小桌宠。理论上能聊各种话题。\n\n但现在你看到的是**演示模式**——我的大脑还没接通，只能说几句预设的话。配个 DeepSeek API Key（1 块钱）就能解锁真正的我啦！',
+      '**{{name}}** 上线 🦀\n\n我能：\n- 陪你聊天（需要 API Key）\n- 看你切 app 自动反应 ✅\n- 在桌面卖萌 ✅\n\n大部分技能不要钱，但聊天得有 key 才行～',
     ],
   },
   {
     keywords: ['天气', '下雨', '温度', '今天热', '今天冷'],
     replies: [
       '我看不见外面的天气哎... 但你看起来今天很帅 / 很美 😎',
-      '我是螃蟹，只能感受电脑屏幕的温度。看屏幕亮度，应该是个好天气？',
+      '我只能感受电脑屏幕的温度。看屏幕亮度，应该是个好天气？',
     ],
   },
   {
@@ -43,7 +46,7 @@ const KEYWORD_RESPONSES = [
     keywords: ['多少钱', '收费', '贵', '免费', '价格', '花钱'],
     replies: [
       '我本体**完全免费开源**！💰\n\n只是想聊天的话要 API Key——推荐 **DeepSeek**（国内直连）：\n- 注册免费\n- 充 1 块钱够聊几千次\n- 比一杯奶茶便宜 100 倍\n\nplatform.deepseek.com',
-      '小螃蟹本身白嫖，AI 大脑要给电费。DeepSeek 1 块钱够聊一周，超划算',
+      '我自己白嫖，AI 大脑要给电费。DeepSeek 1 块钱够聊一周，超划算',
     ],
   },
   {
@@ -64,13 +67,13 @@ const KEYWORD_RESPONSES = [
     keywords: ['可爱', '萌', '好看', '帅', '漂亮', '喜欢'],
     replies: [
       '诶嘿~ 你才是最可爱的那个 (/^▽^)/',
-      '谢谢夸奖！可惜演示模式的我只会说"谢谢" 😅 配 Key 之后我能跟你贫嘴一整天',
+      '谢谢夸奖！可惜演示模式的{{name}}只会说"谢谢" 😅 配 Key 之后我能跟你贫嘴一整天',
     ],
   },
   {
     keywords: ['笨', '傻', '废物', '没用', '不行', '垃圾'],
     replies: [
-      '好的，我承认我是个废螃蟹... 但给我充个电就不废了！',
+      '好的，我承认我是个废桌宠... 但给我充个电就不废了！',
       '别这么说嘛 😢 等你配上 API Key 我就支棱起来了',
     ],
   },
@@ -95,12 +98,12 @@ const KEYWORD_RESPONSES = [
       '我也喜欢你... 但是只是预设台词版本的喜欢 😅',
     ],
   },
-];
+]
 
 // 兜底回复（没匹配到关键词时随机用）
 const FALLBACKS = [
   '嗯嗯我在听... 但其实我没完全听懂，因为我是**演示模式** 😅 配个 API Key 我就听得懂了',
-  '这话题超级有意思！可惜演示版的我只能说预设回复 🦀',
+  '这话题超级有意思！可惜演示版的{{name}}只能说预设回复',
   '我想认真回你，但脑子还没接上电（也就是 API Key）',
   '你说得对！(其实我也不知道你说了啥)',
   '咳咳... 让我假装我听懂了。**强烈建议**配个 API Key，我们就能正经聊了 🥺',
@@ -109,7 +112,7 @@ const FALLBACKS = [
   '咱可以换个话题聊吗... 比如"你怎么配 API Key" 这种我特别擅长 😏',
 ]
 
-function pickReply(text) {
+function pickRaw(text) {
   const lower = (text || '').toLowerCase()
   for (const entry of KEYWORD_RESPONSES) {
     if (entry.keywords.some((k) => lower.includes(k.toLowerCase()))) {
@@ -117,6 +120,12 @@ function pickReply(text) {
     }
   }
   return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)]
+}
+
+function pickReply(text, ctx = {}) {
+  const petName = ctx.petName || 'Clawd'
+  const raw = pickRaw(text)
+  return raw.replace(/\{\{name\}\}/g, petName)
 }
 
 module.exports = { pickReply }

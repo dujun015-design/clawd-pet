@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>给桌宠起个名字</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --bg-elevated: #fff;
+      --border: #ececec;
+      --text: #1c1c1e;
+      --text-muted: #8e8e93;
+      --accent: #c46a2f;
+      --accent-soft: #fdf3ec;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --bg-elevated: #242427;
+        --border: #2f2f33;
+        --text: #f2f2f7;
+        --text-muted: #8e8e93;
+        --accent: #e07b39;
+        --accent-soft: #2a1f17;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, "PingFang SC", BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      padding: 28px;
+      gap: 18px;
+      -webkit-app-region: drag;
+      -webkit-user-select: none;
+    }
+    h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-top: -8px;
+    }
+    input {
+      -webkit-app-region: no-drag;
+      -webkit-user-select: text;
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      justify-content: flex-end;
+    }
+    button {
+      -webkit-app-region: no-drag;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    button.primary:hover { filter: brightness(1.05); }
+    button:disabled { opacity: 0.5; cursor: default; }
+  </style>
+</head>
+<body>
+  <h1>给桌宠起个名字 🦀</h1>
+  <p class="desc">这个名字会出现在聊天窗、演示模式回复、右键菜单里。<br>不喜欢可以随时改。</p>
+  <input id="name" type="text" placeholder="比如 Clawd / 小橘 / 阿狗 / Pixel" maxlength="20" autofocus />
+  <div class="row">
+    <button id="cancel">取消</button>
+    <button id="save" class="primary">保存</button>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron')
+    const input = document.getElementById('name')
+    const saveBtn = document.getElementById('save')
+    const cancelBtn = document.getElementById('cancel')
+
+    // 拿当前名字回填
+    ;(async () => {
+      const current = await ipcRenderer.invoke('get-pet-name')
+      input.value = current || ''
+      input.select()
+    })()
+
+    function save() {
+      const name = input.value.trim()
+      if (!name) return
+      ipcRenderer.send('set-pet-name', name)
+      window.close()
+    }
+    saveBtn.addEventListener('click', save)
+    cancelBtn.addEventListener('click', () => window.close())
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); save() }
+      if (e.key === 'Escape') window.close()
+    })
+  </script>
+</body>
+</html>

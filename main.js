@@ -43,6 +43,7 @@ function loadConfig() {
         baseURL: cfg.baseURL || preset.baseURL,
         model: cfg.model || preset.defaultModel,
         skin: cfg.skin,
+        petName: cfg.petName || 'Clawd',
       }
     } catch (e) {
       console.error('Failed to parse ~/.clawd-config.json:', e.message)
@@ -227,6 +228,62 @@ function saveConfigSkin(skinName) {
   return true
 }
 
+// ── 改名字 ────────────────────────────────────────────────
+function saveConfigPetName(name) {
+  let raw = {}
+  if (fs.existsSync(CONFIG_PATH)) {
+    try {
+      raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
+    } catch (e) {
+      console.warn('[Clawd] failed to update petName:', e.message)
+      return false
+    }
+  }
+  raw.petName = name
+  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(raw, null, 2)}\n`)
+  config = loadConfig()
+  return true
+}
+
+function broadcastPetName(name) {
+  // 推给所有开着的 BrowserWindow
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('pet-name-update', name)
+  }
+}
+
+let renameWin = null
+function openRenameWindow() {
+  if (renameWin && !renameWin.isDestroyed()) {
+    renameWin.show(); renameWin.moveTop(); renameWin.focus()
+    return
+  }
+  renameWin = new BrowserWindow({
+    width: 420,
+    height: 260,
+    show: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    alwaysOnTop: true,
+    title: '改名字',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    webPreferences: { nodeIntegration: true, contextIsolation: false },
+  })
+  renameWin.loadFile('rename.html')
+  renameWin.once('ready-to-show', () => { renameWin.show(); renameWin.focus() })
+  renameWin.on('closed', () => { renameWin = null })
+}
+
+ipcMain.handle('get-pet-name', () => config?.petName || 'Clawd')
+ipcMain.on('set-pet-name', (_, name) => {
+  const trimmed = String(name || '').trim().slice(0, 20)
+  if (!trimmed) return
+  if (!saveConfigPetName(trimmed)) return
+  console.log(`[Clawd] renamed to: ${trimmed}`)
+  broadcastPetName(trimmed)
+})
+
 function switchSkin(skinName) {
   if (!saveConfigSkin(skinName)) return
   const payload = skinPayload(config?.skin)
@@ -281,6 +338,7 @@ ipcMain.on('init', (event) => {
   event.returnValue = {
     screenW: width,
     screenH: height,
+    petName: config?.petName || 'Clawd',
     ...payload,
   }
 })
@@ -429,6 +487,10 @@ ipcMain.on('show-context-menu', () => {
         ...(skinItems.length ? skinItems : [{ label: '没有找到可用皮肤', enabled: false }]),
       ],
     },
+    {
+      label: '✏️ 改个名字',
+      click: openRenameWindow,
+    },
     { type: 'separator' },
     {
       label: '📦 查看 GitHub 仓库',
@@ -466,7 +528,7 @@ function activeSessionCount() { return streamsBySession.size }
 // 演示模式：没 client 时分块"模拟流"返回预设回复
 async function streamDemoReply(event, sessionId, prompt) {
   setStatus('thinking', '演示模式 · 思考中...')
-  const text = pickReply(prompt)
+  const text = pickReply(prompt, { petName: config?.petName || 'Clawd' })
   const aborter = { aborted: false }
   streamsBySession.set(sessionId, { controller: { abort: () => { aborter.aborted = true } } })
   await new Promise((r) => setTimeout(r, 500 + Math.random() * 800))
