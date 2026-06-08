@@ -6,6 +6,7 @@ const os = require('os')
 const Anthropic = require('@anthropic-ai/sdk')
 const OpenAI = require('openai')
 const { pickReply } = require('./demo-responses')
+const Transcripts = require('./lib/transcripts')
 
 let mainWin, chatWin
 let currentStream = null
@@ -344,6 +345,34 @@ function openChatWindow() {
 
 ipcMain.on('open-chat', openChatWindow)
 
+// ── 看 Claude/Codex 对话窗口 ─────────────────────────────────
+let transcriptsWin = null
+function openTranscriptsWindow() {
+  if (transcriptsWin && !transcriptsWin.isDestroyed()) {
+    transcriptsWin.show(); transcriptsWin.moveTop(); transcriptsWin.focus()
+    return
+  }
+  transcriptsWin = new BrowserWindow({
+    width: 880,
+    height: 640,
+    show: false,
+    alwaysOnTop: false,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  })
+  transcriptsWin.loadFile('transcripts.html')
+  transcriptsWin.once('ready-to-show', () => {
+    transcriptsWin.show(); transcriptsWin.focus()
+  })
+  transcriptsWin.on('closed', () => { transcriptsWin = null })
+}
+
+ipcMain.handle('list-transcripts', () => Transcripts.listAllSessions(40))
+ipcMain.handle('read-transcript', (_, session) => Transcripts.readTranscript(session))
+
 // 右键菜单
 ipcMain.on('show-context-menu', () => {
   const currentSkinPath = resolveSkinPath(config?.skin)
@@ -357,6 +386,10 @@ ipcMain.on('show-context-menu', () => {
     {
       label: '💬 打开聊天',
       click: openChatWindow,
+    },
+    {
+      label: '📜 看 Claude / Codex 对话',
+      click: openTranscriptsWindow,
     },
     {
       label: '🦀 回到右下角',
