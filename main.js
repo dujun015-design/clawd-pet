@@ -335,6 +335,11 @@ function openChatWindow() {
   })
 
   chatWin.on('closed', () => {
+    // 关闭聊天窗 → 中断所有还在跑的 session
+    for (const s of streamsBySession.values()) {
+      try { s.controller?.abort() } catch (_) {}
+    }
+    streamsBySession.clear()
     if (currentStream) {
       try { currentStream.controller.abort() } catch (_) {}
       currentStream = null
@@ -454,62 +459,83 @@ ipcMain.on('show-context-menu', () => {
   Menu.buildFromTemplate(template).popup()
 })
 
+// 多 session 并行流：sessionId → 流对象
+const streamsBySession = new Map()
+function activeSessionCount() { return streamsBySession.size }
+
 // 演示模式：没 client 时分块"模拟流"返回预设回复
-async function streamDemoReply(event, prompt) {
+async function streamDemoReply(event, sessionId, prompt) {
   setStatus('thinking', '演示模式 · 思考中...')
   const text = pickReply(prompt)
-  // 加点思考延迟，假装在用 AI
+  const aborter = { aborted: false }
+  streamsBySession.set(sessionId, { controller: { abort: () => { aborter.aborted = true } } })
   await new Promise((r) => setTimeout(r, 500 + Math.random() * 800))
-  // 一字一字吐出来，模拟流式
-  const chars = Array.from(text)
-  for (const ch of chars) {
-    event.reply('stream-chunk', ch)
+  for (const ch of Array.from(text)) {
+    if (aborter.aborted) break
+    event.reply('stream-chunk', { sessionId, chunk: ch })
     await new Promise((r) => setTimeout(r, 25 + Math.random() * 35))
   }
-  event.reply('stream-done')
+  streamsBySession.delete(sessionId)
+  event.reply('stream-done', { sessionId })
   setStatus('done', '演示回复完了 ✓')
-  setTimeout(() => setStatus('idle', '闲着呢~ (演示模式)'), 3000)
+  setTimeout(() => setStatus('idle', activeSessionCount() ? '思考中...' : '闲着呢~ (演示模式)'), 3000)
 }
 
-ipcMain.on('send-prompt', async (event, { prompt, history }) => {
+ipcMain.on('send-prompt', async (event, { sessionId, prompt, history }) => {
+  // 兼容老消息（没带 sessionId 视为单 session）
+  sessionId = sessionId || 'default'
+
   if (!client) {
-    return streamDemoReply(event, prompt)
+    return streamDemoReply(event, sessionId, prompt)
   }
   setStatus('thinking', '思考中...')
   try {
+    let stream
     if (config.type === 'anthropic') {
-      currentStream = client.messages.stream({
+      stream = client.messages.stream({
         model: config.model,
         max_tokens: 1024,
         messages: history,
       })
-      for await (const chunk of currentStream) {
+      streamsBySession.set(sessionId, stream)
+      for await (const chunk of stream) {
         if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          event.reply('stream-chunk', chunk.delta.text)
+          event.reply('stream-chunk', { sessionId, chunk: chunk.delta.text })
         }
       }
     } else {
-      // OpenAI-compatible streaming
-      currentStream = await client.chat.completions.create({
+      stream = await client.chat.completions.create({
         model: config.model,
         messages: history,
         stream: true,
         max_tokens: 1024,
       })
-      for await (const chunk of currentStream) {
+      streamsBySession.set(sessionId, stream)
+      for await (const chunk of stream) {
         const text = chunk.choices?.[0]?.delta?.content
-        if (text) event.reply('stream-chunk', text)
+        if (text) event.reply('stream-chunk', { sessionId, chunk: text })
       }
     }
-    currentStream = null
-    event.reply('stream-done')
+    streamsBySession.delete(sessionId)
+    event.reply('stream-done', { sessionId })
     setStatus('done', '回答完了 ✓')
-    setTimeout(() => setStatus('idle', '闲着呢~'), 3000)
+    setTimeout(() => {
+      if (activeSessionCount() === 0) setStatus('idle', '闲着呢~')
+    }, 3000)
   } catch (e) {
-    currentStream = null
+    streamsBySession.delete(sessionId)
     if (e.name === 'AbortError' || e.message?.includes('aborted')) return
-    event.reply('stream-error', e.message)
+    event.reply('stream-error', { sessionId, message: e.message })
     setStatus('idle', '出错了...')
+  }
+})
+
+// 让 renderer 主动中断某个 session（关 tab 时用）
+ipcMain.on('abort-session', (_, sessionId) => {
+  const s = streamsBySession.get(sessionId)
+  if (s) {
+    try { s.controller?.abort() } catch (e) {}
+    streamsBySession.delete(sessionId)
   }
 })
 
