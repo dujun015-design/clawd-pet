@@ -9,6 +9,7 @@ const dot = document.getElementById('status-dot')
 const initData = ipcRenderer.sendSync('init')
 const { screenW, screenH } = initData
 let ANIMATIONS = initData.animations
+let currentSkinName = initData.skinName || 'clawd'
 
 // 跟 index.html 的 --pet-size CSS 变量保持一致
 const PET_W = 130
@@ -34,6 +35,41 @@ let isStaticMode = false
 
 // NOTE: 粒子/飘字效果（FX）已移除 —— 用户觉得 tap tap / 星星 太密会遮住主体
 // 如果想加回来，请确保默认关闭，做成用户可选开关
+
+function updateBubbleAnchor() {
+  try {
+    if (!pet.complete || !pet.naturalWidth) return
+    const canvas = document.createElement('canvas')
+    canvas.width = PET_W
+    canvas.height = PET_H
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, PET_W, PET_H)
+    ctx.drawImage(pet, 0, 0, PET_W, PET_H)
+    const { data } = ctx.getImageData(0, 0, PET_W, PET_H)
+    let minY = PET_H
+    let maxY = -1
+    for (let y = 0; y < PET_H; y++) {
+      for (let x = 0; x < PET_W; x++) {
+        if (data[(y * PET_W + x) * 4 + 3] > 18) {
+          minY = Math.min(minY, y)
+          maxY = Math.max(maxY, y)
+        }
+      }
+    }
+    if (maxY < 0) return
+    const visibleHeight = maxY - minY + 1
+    const gap = visibleHeight < 48 ? 5 : visibleHeight < 92 ? 7 : 9
+    const bottom = Math.max(34, Math.min(142, PET_H - minY + gap))
+    wrap.style.setProperty('--bubble-bottom', `${bottom}px`)
+  } catch (_) {
+    wrap.style.setProperty('--bubble-bottom', '52px')
+  }
+}
+
+pet.addEventListener('load', () => {
+  requestAnimationFrame(updateBubbleAnchor)
+  setTimeout(updateBubbleAnchor, 120)
+})
 
 function setPetMotionClass(name, file) {
   const cleanPath = file.split('?')[0].toLowerCase()
@@ -110,10 +146,59 @@ pet.addEventListener('pointerleave', () => {
 let bubbleTimer = null
 
 function showBubble(text, durationMs = 3500) {
+  if (!text) return
   bubble.textContent = text
   bubble.style.display = 'block'
   clearTimeout(bubbleTimer)
   bubbleTimer = setTimeout(() => { bubble.style.display = 'none' }, durationMs)
+}
+
+const CHIBI_QUOTES = {
+  greeting: [
+    '来了。别把桌面弄乱。',
+    '今天也别偷懒，笨鸟。',
+    '坐好，先把要做的事说清楚。',
+  ],
+  reset: ['回来了。位置都记不住？', '站好，别乱跑。'],
+  skin: ['这身还算顺眼。', '勉强合格。'],
+  drop: ['文件放这，我看。', '别催，我会处理。'],
+  click: ['有事就说。', '我在。别戳了。'],
+  annoyed: ['再戳就自己写。', '手闲的话，去整理需求。'],
+  'status-thinking': ['别急，我在看。', '先别打断。', '这个要想清楚。'],
+  'status-working': ['在写了。', '字会出来，别盯太紧。', '我尽量写得像样。'],
+  'status-done': ['好了。自己检查一遍。', '写完了，别说你没看懂。', '结果在这。'],
+  'status-idle': ['暂时没事？那就别浪费时间。', '我在，茶也在。'],
+  'cli-thinking': ['它在想，我盯着。', '先等，别乱动。'],
+  'cli-building': ['命令在跑，别碰终端。', '小黑窗还活着。'],
+  'cli-typing': ['它开始回了。', '有字了，安静看。'],
+  'cli-jump': ['跑完了。还不错。', '结束，去看结果。'],
+  'activity-coding': ['代码别写成一团。', '缩进先对齐。'],
+  'activity-terminal': ['终端打开了，谨慎点。', '命令别乱敲。'],
+  'activity-study': ['看仔细点。', '读完再下结论。'],
+  'activity-creative': ['审美别掉线。', '这一步要干净。'],
+  'activity-chat': ['有人找你。', '先把话说清楚。'],
+  'activity-leisure': ['休息可以，别过头。', '喝口茶再继续。'],
+  'activity-browse': [
+    '别开太多标签页。',
+    '有用的，记下来。',
+    '看资料可以，别走神。',
+    '读完再下结论，笨鸟。',
+    '这页值得留着吗？',
+    '眼睛离屏幕远一点。',
+  ],
+  'streak-study': ['看这么久，喝口茶。', '眼睛也要休息，笨鸟。'],
+  'streak-chat': ['盯太久了，停两分钟。', '休息一下，不许逞强。'],
+}
+
+function pickQuote(key, fallback) {
+  if (currentSkinName !== 'golden-chibi') return fallback
+  const quotes = CHIBI_QUOTES[key]
+  if (!quotes?.length) return fallback
+  return quotes[Math.floor(Math.random() * quotes.length)]
+}
+
+function say(key, fallback, durationMs = 3500) {
+  showBubble(pickQuote(key, fallback), durationMs)
 }
 
 // ── Click → wave + open chat ──────────────────────────────────────────────
@@ -121,6 +206,7 @@ let petLocked = false
 
 function handleClick() {
   setState('happy')
+  say('click', '打开聊天', 1000)
   // 别 lock 太久，让对话框立刻能弹出来
   petLocked = true
   setTimeout(() => {
@@ -152,7 +238,7 @@ function bindDropZone(el) {
     const paths = files.map(f => f.path).filter(Boolean)
     if (paths.length) {
       setState('happy')
-      showBubble(`吃到了 ${paths.length} 个文件 🍔`, 2000)
+      say('drop', `吃到了 ${paths.length} 个文件 🍔`, 2000)
       ipcRenderer.send('drop-files', paths)
     }
   })
@@ -163,14 +249,15 @@ bindDropZone(wrap)
 // 主进程让我们回到右下角
 ipcRenderer.on('reset-position', () => {
   setPetPos(screenW - PET_W - 20, screenH - PET_H - 40)
-  showBubble('我回来啦 ✋', 1500)
+  say('reset', '我回来啦 ✋', 1500)
 })
 
-ipcRenderer.on('skin-update', (_, { animations, skinLabel }) => {
+ipcRenderer.on('skin-update', (_, { animations, skinLabel, skinName }) => {
   ANIMATIONS = animations
+  currentSkinName = skinName || currentSkinName
   currentState = ''
   setState('idle')
-  showBubble(`已换装：${skinLabel}`, 1800)
+  say('skin', `已换装：${skinLabel}`, 1800)
   resetIdleTimer()
 })
 
@@ -184,7 +271,7 @@ pet.addEventListener('click', () => {
   if (clickCount >= 4) {
     clickCount = 0
     setState('annoyed')
-    showBubble('烦死了别戳了！😤', 2000)
+    say('annoyed', '烦死了别戳了！😤', 2000)
     petLocked = true
     setTimeout(() => { petLocked = false; setState('idle') }, 2500)
   }
@@ -204,23 +291,31 @@ const ACTIVITY_STATE = {
 
 let activityResetTimer = null
 ipcRenderer.on('activity-update', (_, { type, message, animation, source }) => {
-  if (petLocked || isDragging) return
+  if (isDragging) return
+  const fromCli = source === 'cli'
+  if (petLocked && !fromCli) return
   // 优先 main 指定的 animation（cli-watcher 直接指定 jump/thinking/typing），否则按 type 映射
-  const animState = animation || ACTIVITY_STATE[type] || 'idle'
-  showBubble(message)
+  const rawAnimState = animation || ACTIVITY_STATE[type] || 'idle'
+  const animState = fromCli && rawAnimState === 'building' ? 'typing' : rawAnimState
+  const quoteKey = source === 'streak' ? `streak-${type}` : fromCli ? `cli-${rawAnimState}` : `activity-${type}`
+  say(quoteKey, message, fromCli ? 2400 : 3500)
   setState(animState)
   resetIdleTimer()
-  // jump 是庆祝动作，短暂播完回 idle；其他状态持续 8s
-  const holdMs = animState === 'jump' ? 1800 : 8000
+  if (fromCli) {
+    petLocked = animState !== 'jump'
+  }
+  // jump 是庆祝动作，短暂播完回 idle；CLI 工作状态要撑到下一次 watcher 刷新
+  const holdMs = animState === 'jump' ? 2200 : fromCli ? 12_000 : 8000
   clearTimeout(activityResetTimer)
   activityResetTimer = setTimeout(() => {
+    if (fromCli) petLocked = false
     if (!petLocked && !isDragging) setState('idle')
   }, holdMs)
 })
 
 // ── Status updates from main (API call lifecycle) ─────────────────────────
 ipcRenderer.on('status-update', (_, { state, message }) => {
-  showBubble(message)
+  say(`status-${state}`, message)
   dot.className = state === 'idle' ? '' : state === 'done' ? 'done' : state
   if (state === 'thinking') {
     setState('thinking')
@@ -234,7 +329,7 @@ ipcRenderer.on('status-update', (_, { state, message }) => {
     setTimeout(() => {
       petLocked = false
       setState('idle')
-    }, 1800)
+    }, 2200)
   } else if (state === 'idle') {
     petLocked = false
     setState('idle')

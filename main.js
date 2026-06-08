@@ -503,7 +503,7 @@ ipcMain.on('show-context-menu', () => {
         dialog.showMessageBox({
           type: 'info',
           title: 'Clawd 桌宠',
-          message: 'Clawd 桌宠 v1.0.0',
+          message: 'Clawd 桌宠 v2.0.0',
           detail:
             'AI 桌面宠物，支持 9 种大模型。\n\n' +
             'Clawd 角色 © Anthropic\n' +
@@ -658,17 +658,21 @@ const ACTIVITY_MAP = {
   'Spotify':        { type: 'leisure',  msgs: ['听什么歌呢 🎵'] },
   'Music':          { type: 'leisure',  msgs: ['Apple Music 🎶'] },
   'NeteaseMusic':   { type: 'leisure',  msgs: ['网易云人均文青 🎶'] },
+  'NetEaseMusic':   { type: 'leisure',  msgs: ['网易云人均文青 🎶'] },
+  '网易云音乐':       { type: 'leisure',  msgs: ['网易云开着，别太 emo'] },
   'QQMusic':        { type: 'leisure',  msgs: ['QQ 音乐 🎵'] },
+  'QQ Music':       { type: 'leisure',  msgs: ['QQ 音乐 🎵'] },
+  'QQ音乐':          { type: 'leisure',  msgs: ['QQ 音乐开工'] },
   'YouTube':        { type: 'leisure',  msgs: ['看视频呢 📺'] },
   'Netflix':        { type: 'leisure',  msgs: ['Netflix 时间 🍿'] },
   'IINA':           { type: 'leisure',  msgs: ['IINA 看片 🎬'] },
 
   // Browser (generic)
-  'Safari':         { type: 'browse',   msgs: ['Safari 冲浪 🌊'] },
-  'Google Chrome':  { type: 'browse',   msgs: ['网上冲浪 🌐'] },
-  'Arc':            { type: 'browse',   msgs: ['Arc 真好用 🏛️'] },
-  'Firefox':        { type: 'browse',   msgs: ['火狐冲浪 🦊'] },
-  'Microsoft Edge': { type: 'browse',   msgs: ['Edge 浏览中'] },
+  'Safari':         { type: 'browse',   msgs: ['Safari 冲浪 🌊', '看到有用的就记下来'] },
+  'Google Chrome':  { type: 'browse',   msgs: ['网上冲浪 🌐', '别被标签页淹没了'] },
+  'Arc':            { type: 'browse',   msgs: ['Arc 真好用 🏛️', '资料看完要归档'] },
+  'Firefox':        { type: 'browse',   msgs: ['火狐冲浪 🦊', '读完再下结论'] },
+  'Microsoft Edge': { type: 'browse',   msgs: ['Edge 浏览中', '别一路点下去忘了正事'] },
 
   // Design / creative
   'Figma':          { type: 'creative', msgs: ['设计搞起来 🎨', '一起 Figma'] },
@@ -683,13 +687,13 @@ const ACTIVITY_MAP = {
 
 // Each activity type maps to an animation state
 const ACTIVITY_ANIM = {
-  coding:   'running',   // pet "works" alongside you
-  terminal: 'running',
-  study:    'running',
-  creative: 'running',
-  chat:     'idle',
-  leisure:  'idle',
-  browse:   'idle',
+  coding:   'typing',
+  terminal: 'typing',
+  study:    'reading',
+  creative: 'building',
+  chat:     'conducting',
+  leisure:  'groove',
+  browse:   'reading',
 }
 
 // ── 跨平台拿前台 App 名 ──
@@ -770,7 +774,10 @@ const WIN_TO_MAC = {
   // 音乐 / 视频
   'Spotify': 'Spotify',
   'cloudmusic': 'NeteaseMusic',
+  'NeteaseMusic': 'NeteaseMusic',
+  'NetEaseMusic': 'NeteaseMusic',
   'QQMusic': 'QQMusic',
+  'QQ Music': 'QQMusic',
   'PotPlayerMini64': 'IINA',
   'vlc': 'IINA',
   // 设计
@@ -793,7 +800,18 @@ let lastApp = null
 let lastNotifyAt = 0
 const NOTIFY_COOLDOWN_MS = 25_000   // at most once per ~25s on app change
 const APP_REVISIT_MS = 4 * 60_000   // re-notify same app at most every 4 min
+const BROWSER_QUOTE_MS = 5 * 60_000 // while staying in a browser, say one line every ~5 min
 let lastNotifyApp = null
+let activityStreak = { appName: null, type: null, since: 0, teaFired: false, breakFired: false }
+const STUDY_TEA_MS = 18 * 60_000
+const SCREEN_BREAK_MS = 45 * 60_000
+
+function updateActivityStreak(appName, type, now) {
+  if (activityStreak.appName !== appName || activityStreak.type !== type) {
+    activityStreak = { appName, type, since: now, teaFired: false, breakFired: false }
+  }
+  return now - activityStreak.since
+}
 
 async function pollActivity() {
   if (!mainWin || mainWin.isDestroyed()) return
@@ -814,7 +832,34 @@ async function pollActivity() {
   if (!def) return
 
   const now = Date.now()
-  const sameAppRecent = lastNotifyApp === appName && now - lastNotifyAt < APP_REVISIT_MS
+  const activeMs = updateActivityStreak(appName, def.type, now)
+  if (def.type === 'study' && activeMs >= STUDY_TEA_MS && !activityStreak.teaFired) {
+    activityStreak.teaFired = true
+    mainWin.webContents.send('activity-update', {
+      type: 'study',
+      animation: 'reading',
+      message: '看这么久，喝口茶再继续。',
+      source: 'streak',
+    })
+    lastNotifyAt = now
+    lastNotifyApp = appName
+    return
+  }
+  if (activeMs >= SCREEN_BREAK_MS && !activityStreak.breakFired) {
+    activityStreak.breakFired = true
+    mainWin.webContents.send('activity-update', {
+      type: 'chat',
+      animation: 'notification',
+      message: '盯太久了，眼睛休息两分钟。',
+      source: 'streak',
+    })
+    lastNotifyAt = now
+    lastNotifyApp = appName
+    return
+  }
+
+  const revisitMs = def.type === 'browse' ? BROWSER_QUOTE_MS : APP_REVISIT_MS
+  const sameAppRecent = lastNotifyApp === appName && now - lastNotifyAt < revisitMs
   const cooldownActive = now - lastNotifyAt < NOTIFY_COOLDOWN_MS
   if (!appChanged && sameAppRecent) return
   if (cooldownActive && !appChanged) return

@@ -211,24 +211,27 @@
       50%      { opacity: 0.5; transform: scale(0.85); }
     }
 
-    /* Speech bubble — sits above the crab */
+    /* Speech bubble — renderer measures the visible pet pixels and anchors this per skin/state */
     #bubble {
       position: absolute;
-      bottom: 70px;
+      bottom: var(--bubble-bottom, 52px);
       left: 50%;
       transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #e07b39;
-      border-radius: 10px;
-      padding: 5px 10px;
-      font: 500 11px -apple-system, 'SF Pro Text', 'PingFang SC', sans-serif;
-      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1.5px solid rgba(224, 123, 57, 0.9);
+      border-radius: 11px;
+      padding: 6px 10px;
+      font: 500 11px/1.35 -apple-system, 'SF Pro Text', 'PingFang SC', sans-serif;
+      white-space: normal;
       pointer-events: none;
       display: none;
       z-index: 10;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 5px 16px rgba(0,0,0,0.16);
       color: #333;
-      max-width: 240px;
+      width: max-content;
+      min-width: 54px;
+      max-width: 210px;
+      text-align: center;
     }
     #bubble::after {
       content: '';
