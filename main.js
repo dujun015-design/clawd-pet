@@ -7,6 +7,7 @@ const Anthropic = require('@anthropic-ai/sdk')
 const OpenAI = require('openai')
 const { pickReply } = require('./demo-responses')
 const Transcripts = require('./lib/transcripts')
+const { startCliWatcher } = require('./lib/cli-watcher')
 
 let mainWin, chatWin
 let currentStream = null
@@ -373,6 +374,19 @@ function openTranscriptsWindow() {
 ipcMain.handle('list-transcripts', () => Transcripts.listAllSessions(40))
 ipcMain.handle('read-transcript', (_, session) => Transcripts.readTranscript(session))
 
+// 拖文件到桌宠 → 打开聊天 + 把路径作为 prompt 前缀
+let pendingDropFiles = null
+ipcMain.on('drop-files', (_, paths) => {
+  pendingDropFiles = paths
+  openChatWindow()
+  // 等 chat ready 自己来拿
+})
+ipcMain.handle('claim-drop-files', () => {
+  const f = pendingDropFiles
+  pendingDropFiles = null
+  return f
+})
+
 // 右键菜单
 ipcMain.on('show-context-menu', () => {
   const currentSkinPath = resolveSkinPath(config?.skin)
@@ -732,8 +746,45 @@ function startActivityWatcher() {
   activityTimer = setInterval(pollActivity, 5_000)
 }
 
+// CLI 状态广播：把 cli-watcher 的事件转给渲染层 + 系统通知
+function emitCliEvent(ev) {
+  if (!mainWin || mainWin.isDestroyed()) return
+  if (ev.type === 'state') {
+    // 复用 activity-update 通道触发桌宠状态（renderer 已经处理 typing/thinking/building/jump）
+    mainWin.webContents.send('activity-update', {
+      type: stateToActivityType(ev.state),
+      animation: ev.state,
+      message: ev.label,
+      source: 'cli',
+    })
+  } else if (ev.type === 'completion') {
+    // 系统通知 —— 你不用守屏，跑完了我喊你
+    try {
+      const { Notification } = require('electron')
+      if (Notification.isSupported()) {
+        new Notification({
+          title: `${ev.cli === 'claude' ? 'Claude' : 'Codex'} 跑完啦 ✨`,
+          body: ev.sessionTitle ? `项目：${ev.sessionTitle}` : '点桌宠看看结果',
+          silent: false,
+        }).show()
+      }
+    } catch (e) {}
+  }
+}
+
+function stateToActivityType(state) {
+  // 跟 renderer 里的 ACTIVITY_STATE 对齐
+  if (state === 'thinking') return 'study'
+  if (state === 'building') return 'creative'
+  if (state === 'typing')   return 'coding'
+  if (state === 'jump')     return 'happy'
+  return 'browse'
+}
+
 app.whenReady().then(() => {
   createMainWindow()
   startActivityWatcher()
+  // 5 秒后启动 CLI 监听，避免跟启动招呼撞车
+  setTimeout(() => startCliWatcher(emitCliEvent), 5_000)
 })
 app.on('window-all-closed', () => app.quit())

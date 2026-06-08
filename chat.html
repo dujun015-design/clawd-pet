@@ -453,6 +453,23 @@
     })
 
     inputEl.focus()
+
+    // ── 拖到桌宠的文件 → 自动塞进输入框 ──
+    ;(async () => {
+      const files = await ipcRenderer.invoke('claim-drop-files')
+      if (files && files.length) {
+        const lines = files.map(f => '📎 ' + f).join('\n')
+        const prefix = files.length === 1
+          ? `这个文件能干嘛？\n${lines}\n\n`
+          : `帮我看一下这些文件：\n${lines}\n\n`
+        inputEl.value = prefix
+        inputEl.style.height = ''
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px'
+        // 光标放最后
+        inputEl.focus()
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length)
+      }
+    })()
   </script>
 </body>
 </html>

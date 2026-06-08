@@ -248,6 +248,13 @@
       50% { opacity: 0.5; transform: scale(0.85); }
     }
 
+    /* 拖文件到桌宠时的"咀嚼"高亮 */
+    #pet-wrap.drop-target #pet {
+      filter: drop-shadow(0 0 12px rgba(224,123,57,0.85)) brightness(1.1);
+      transform: scale(1.1);
+      transition: transform 0.15s, filter 0.15s;
+    }
+
     canvas { display: block; }
   </style>
 </head>

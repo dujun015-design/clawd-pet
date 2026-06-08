@@ -134,6 +134,32 @@ function handleClick() {
 pet.addEventListener('contextmenu', (e) => e.preventDefault())
 window.addEventListener('contextmenu', (e) => e.preventDefault())
 
+// ── 拖文件到桌宠 → 把文件名作为聊天 prompt 前缀 ──
+function bindDropZone(el) {
+  el.addEventListener('dragover', (e) => {
+    e.preventDefault()
+    ipcRenderer.send('set-ignore', false)
+    wrap.classList.add('drop-target')
+  })
+  el.addEventListener('dragleave', () => {
+    wrap.classList.remove('drop-target')
+  })
+  el.addEventListener('drop', (e) => {
+    e.preventDefault()
+    wrap.classList.remove('drop-target')
+    const files = Array.from(e.dataTransfer.files || [])
+    if (!files.length) return
+    const paths = files.map(f => f.path).filter(Boolean)
+    if (paths.length) {
+      setState('happy')
+      showBubble(`吃到了 ${paths.length} 个文件 🍔`, 2000)
+      ipcRenderer.send('drop-files', paths)
+    }
+  })
+}
+bindDropZone(pet)
+bindDropZone(wrap)
+
 // 主进程让我们回到右下角
 ipcRenderer.on('reset-position', () => {
   setPetPos(screenW - PET_W - 20, screenH - PET_H - 40)
@@ -177,17 +203,19 @@ const ACTIVITY_STATE = {
 }
 
 let activityResetTimer = null
-ipcRenderer.on('activity-update', (_, { type, message }) => {
+ipcRenderer.on('activity-update', (_, { type, message, animation, source }) => {
   if (petLocked || isDragging) return
-  const animState = ACTIVITY_STATE[type] || 'idle'
+  // 优先 main 指定的 animation（cli-watcher 直接指定 jump/thinking/typing），否则按 type 映射
+  const animState = animation || ACTIVITY_STATE[type] || 'idle'
   showBubble(message)
   setState(animState)
   resetIdleTimer()
-  // Keep the activity animation a little longer than the bubble
+  // jump 是庆祝动作，短暂播完回 idle；其他状态持续 8s
+  const holdMs = animState === 'jump' ? 1800 : 8000
   clearTimeout(activityResetTimer)
   activityResetTimer = setTimeout(() => {
     if (!petLocked && !isDragging) setState('idle')
-  }, 8000)
+  }, holdMs)
 })
 
 // ── Status updates from main (API call lifecycle) ─────────────────────────
