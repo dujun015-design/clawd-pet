@@ -107,6 +107,35 @@ function setStatus(state, message) {
 }
 
 // ── Skin 系统 ─────────────────────────────────────────────────────────────
+function copySkinDir(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir)) return false
+  fs.mkdirSync(targetDir, { recursive: true })
+  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = path.join(sourceDir, entry.name)
+    const targetPath = path.join(targetDir, entry.name)
+    if (entry.isDirectory()) {
+      copySkinDir(sourcePath, targetPath)
+    } else {
+      fs.copyFileSync(sourcePath, targetPath)
+    }
+  }
+  return true
+}
+
+function ensureUserCopyOfBuiltinSkin(name) {
+  const builtinPath = path.join(__dirname, 'assets', 'skins', name)
+  const userPath = path.join(os.homedir(), '.clawd', 'skins', name)
+  if (findSkinImage(userPath, 'idle')) return userPath
+  try {
+    if (copySkinDir(builtinPath, userPath) && findSkinImage(userPath, 'idle')) {
+      return userPath
+    }
+  } catch (e) {
+    console.warn(`[Clawd] failed to prepare user skin copy for "${name}":`, e.message)
+  }
+  return null
+}
+
 // 解析 skin 路径，优先级：
 //   1. 绝对路径（用户写死的）
 //   2. ~/.clawd/skins/<name>/  （用户安装的皮肤）
@@ -115,7 +144,7 @@ function setStatus(state, message) {
 function resolveSkinPath(skinName) {
   const builtinDir = path.join(__dirname, 'assets', 'skins')
   const userDir = path.join(os.homedir(), '.clawd', 'skins')
-  const fallback = path.join(builtinDir, 'clawd')
+  const fallback = ensureUserCopyOfBuiltinSkin('clawd') || path.join(builtinDir, 'clawd')
 
   if (!skinName) return fallback
   if (path.isAbsolute(skinName) && fs.existsSync(skinName)) return skinName
@@ -194,10 +223,12 @@ function listSkinEntries(dir, source) {
 function listAvailableSkins() {
   const builtinDir = path.join(__dirname, 'assets', 'skins')
   const userDir = path.join(os.homedir(), '.clawd', 'skins')
-  return [
+  ensureUserCopyOfBuiltinSkin('clawd')
+  const entries = [
     ...listSkinEntries(builtinDir, '内置'),
     ...listSkinEntries(userDir, '用户'),
   ]
+  return [...new Map(entries.map((skin) => [skin.name, skin])).values()]
 }
 
 function skinPayload(skinName) {
@@ -503,7 +534,7 @@ ipcMain.on('show-context-menu', () => {
         dialog.showMessageBox({
           type: 'info',
           title: 'Clawd 桌宠',
-          message: 'Clawd 桌宠 v2.0.0',
+          message: 'Clawd 桌宠 v2.0.1',
           detail:
             'AI 桌面宠物，支持 9 种大模型。\n\n' +
             'Clawd 角色 © Anthropic\n' +
