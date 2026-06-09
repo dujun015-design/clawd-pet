@@ -45,3 +45,6 @@ releases/
 tutorial-video/voiceover/wavs/
 tutorial-video/voiceover/full-narration.wav
 tutorial-video/voiceover/timed/
+
+# Local video workspace; kept off GitHub
+tutorial-video/

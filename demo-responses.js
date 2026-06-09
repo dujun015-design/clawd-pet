@@ -2,7 +2,7 @@
 // 用关键词匹配 + 随机兜底，让用户先体验
 //
 // 模板占位符 {{name}} 会在运行时替换成用户设的桌宠名
-// （默认 'Clawd'，用户改名后用新名字）
+// （默认 '桌宠'，用户改名后用新名字）
 
 const KEYWORD_RESPONSES = [
   {
@@ -123,7 +123,7 @@ function pickRaw(text) {
 }
 
 function pickReply(text, ctx = {}) {
-  const petName = ctx.petName || 'Clawd'
+  const petName = ctx.petName || '桌宠'
   const raw = pickRaw(text)
   return raw.replace(/\{\{name\}\}/g, petName)
 }

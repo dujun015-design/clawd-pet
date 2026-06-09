@@ -1,10 +1,12 @@
-# Clawd 配置说明
+# AI 桌宠配置说明
 
-在你的 home 目录创建 `~/.clawd-config.json` 文件来配置 Clawd 使用的大模型。
+在 home 目录创建 `~/.clawd-config.json` 文件来配置聊天模型、皮肤和名字。
+
+> 配置文件名继续沿用 `.clawd-config.json`，这样旧用户升级不会丢配置。
 
 ## 支持的 Provider 预设
 
-填 `provider` 字段就行，其他字段（baseURL、model）会自动用预设默认值。
+填 `provider` 字段即可，其他字段会自动使用预设默认值。
 
 | Provider | 默认模型 | baseURL |
 |---|---|---|
@@ -14,21 +16,14 @@
 | `moonshot` / `kimi` | `moonshot-v1-8k` | https://api.moonshot.cn/v1 |
 | `zhipu` | `glm-4-flash` | 智谱 GLM |
 | `qwen` | `qwen-turbo` | 通义千问 |
-| `openrouter` | `anthropic/claude-sonnet-4` | OpenRouter（任意模型代理） |
-| `groq` | `llama-3.3-70b-versatile` | Groq（超快） |
-| `ollama` | `llama3.2` | http://localhost:11434/v1（本地） |
+| `openrouter` | `anthropic/claude-sonnet-4` | OpenRouter |
+| `groq` | `llama-3.3-70b-versatile` | Groq |
+| `ollama` | `llama3.2` | http://localhost:11434/v1 |
 
 ## 配置示例
 
-### Anthropic Claude（默认）
-```json
-{
-  "provider": "anthropic",
-  "apiKey": "sk-ant-xxxxx"
-}
-```
+### DeepSeek
 
-### DeepSeek（便宜好用，国内推荐）
 ```json
 {
   "provider": "deepseek",
@@ -36,7 +31,8 @@
 }
 ```
 
-### Kimi（长上下文）
+### Kimi
+
 ```json
 {
   "provider": "kimi",
@@ -46,6 +42,7 @@
 ```
 
 ### 通义千问
+
 ```json
 {
   "provider": "qwen",
@@ -54,7 +51,8 @@
 }
 ```
 
-### Ollama 本地模型（免 key）
+### Ollama 本地模型
+
 ```json
 {
   "provider": "ollama",
@@ -64,6 +62,7 @@
 ```
 
 ### 自定义 OpenAI 兼容接口
+
 ```json
 {
   "provider": "openai",
@@ -73,30 +72,24 @@
 }
 ```
 
-## 自定义皮肤 🎨
-
-加 `skin` 字段切换皮肤：
+## 皮肤和名字
 
 ```json
 {
   "provider": "deepseek",
   "apiKey": "sk-xxx",
-  "skin": "clawd-mini"
+  "skin": "golden-chibi",
+  "petName": "桌宠"
 }
 ```
 
-**内置 skin**：
-- `clawd`（默认，原版 Clawd 螃蟹）
-- `clawd-mini`（迷你版）
+内置 skin：
 
-**用自定义皮肤**：把你的 GIF 文件夹放到 `~/.clawd/skins/<名字>/`，然后 `"skin": "<名字>"` 即可。
+- `clawd`：默认 Clawd 皮肤
+- `golden-chibi`：白发金眼 Q 版皮肤
 
-或者直接写绝对路径：`"skin": "/path/to/my-skin"`。
-
-详细做法见 [SKINS.md](./SKINS.md)。
+自定义皮肤放到 `~/.clawd/skins/<名字>/`，然后把 `"skin"` 写成对应名字即可。详细做法见 [SKINS.md](./SKINS.md)。
 
 ## 配置后
 
-文件保存后**重启 Clawd 应用**才会生效。
-
-向后兼容：如果还在用旧的 `~/.anthropic_key` 文件，也会继续工作（按 Anthropic 处理）。
+保存后重启 AI 桌宠生效。旧的 `~/.anthropic_key` 文件仍会作为 Anthropic 兼容方式读取。

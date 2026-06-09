@@ -43,7 +43,7 @@ function loadConfig() {
         baseURL: cfg.baseURL || preset.baseURL,
         model: cfg.model || preset.defaultModel,
         skin: cfg.skin,
-        petName: cfg.petName || 'Clawd',
+        petName: cfg.petName || '桌宠',
       }
     } catch (e) {
       console.error('Failed to parse ~/.clawd-config.json:', e.message)
@@ -76,7 +76,7 @@ if (config && config.apiKey) {
   }
 }
 
-console.log(`[Clawd] provider=${config?.provider || 'none'} model=${config?.model || 'n/a'}`)
+console.log(`[AI Desktop Pet] provider=${config?.provider || 'none'} model=${config?.model || 'n/a'}`)
 
 function createMainWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -131,7 +131,7 @@ function ensureUserCopyOfBuiltinSkin(name) {
       return userPath
     }
   } catch (e) {
-    console.warn(`[Clawd] failed to prepare user skin copy for "${name}":`, e.message)
+    console.warn(`[AI Desktop Pet] failed to prepare user skin copy for "${name}":`, e.message)
   }
   return null
 }
@@ -156,7 +156,7 @@ function resolveSkinPath(skinName) {
   if (fs.existsSync(userSkin)) return userSkin
   const builtin = path.join(builtinDir, skinName)
   if (fs.existsSync(builtin)) return builtin
-  console.warn(`[Clawd] skin "${skinName}" not found, falling back to clawd`)
+  console.warn(`[AI Desktop Pet] skin "${skinName}" not found, falling back to clawd`)
   return fallback
 }
 
@@ -192,7 +192,7 @@ function readManifest(skinPath) {
   try {
     return JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
   } catch (e) {
-    console.warn(`[Clawd] failed to parse skin manifest: ${manifestPath}`, e.message)
+    console.warn(`[AI Desktop Pet] failed to parse skin manifest: ${manifestPath}`, e.message)
     return {}
   }
 }
@@ -249,7 +249,7 @@ function saveConfigSkin(skinName) {
     try {
       raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
     } catch (e) {
-      console.warn('[Clawd] failed to update config skin:', e.message)
+      console.warn('[AI Desktop Pet] failed to update config skin:', e.message)
       return false
     }
   }
@@ -266,7 +266,7 @@ function saveConfigPetName(name) {
     try {
       raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
     } catch (e) {
-      console.warn('[Clawd] failed to update petName:', e.message)
+      console.warn('[AI Desktop Pet] failed to update petName:', e.message)
       return false
     }
   }
@@ -306,19 +306,19 @@ function openRenameWindow() {
   renameWin.on('closed', () => { renameWin = null })
 }
 
-ipcMain.handle('get-pet-name', () => config?.petName || 'Clawd')
+ipcMain.handle('get-pet-name', () => config?.petName || '桌宠')
 ipcMain.on('set-pet-name', (_, name) => {
   const trimmed = String(name || '').trim().slice(0, 20)
   if (!trimmed) return
   if (!saveConfigPetName(trimmed)) return
-  console.log(`[Clawd] renamed to: ${trimmed}`)
+  console.log(`[AI Desktop Pet] renamed to: ${trimmed}`)
   broadcastPetName(trimmed)
 })
 
 function switchSkin(skinName) {
   if (!saveConfigSkin(skinName)) return
   const payload = skinPayload(config?.skin)
-  console.log(`[Clawd] switched skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
+  console.log(`[AI Desktop Pet] switched skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
   if (mainWin && !mainWin.isDestroyed()) {
     mainWin.webContents.send('skin-update', payload)
   }
@@ -365,11 +365,11 @@ async function importImageSkin() {
 ipcMain.on('init', (event) => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
   const payload = skinPayload(config?.skin)
-  console.log(`[Clawd] skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
+  console.log(`[AI Desktop Pet] skin: ${payload.skinName} (${Object.keys(payload.animations).length} states)`)
   event.returnValue = {
     screenW: width,
     screenH: height,
-    petName: config?.petName || 'Clawd',
+    petName: config?.petName || '桌宠',
     ...payload,
   }
 })
@@ -387,7 +387,7 @@ function openChatWindow() {
     chatWin.focus()
     return
   }
-  // 算个不挡 Clawd 的位置：在主屏中间靠左
+  // 算个不挡桌宠的位置：在主屏中间靠左
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
   const W = 420, H = 520
   const x = Math.max(40, Math.floor((sw - W) / 2 - 100))
@@ -525,16 +525,16 @@ ipcMain.on('show-context-menu', () => {
     { type: 'separator' },
     {
       label: '📦 查看 GitHub 仓库',
-      click: () => shell.openExternal('https://github.com/dujun015-design/clawd-pet'),
+      click: () => shell.openExternal('https://github.com/dujun015-design/ai-desktop-pet'),
     },
     {
-      label: 'ℹ️ 关于 Clawd',
+      label: 'ℹ️ 关于 AI 桌宠',
       click: () => {
         const { dialog } = require('electron')
         dialog.showMessageBox({
           type: 'info',
-          title: 'Clawd 桌宠',
-          message: 'Clawd 桌宠 v2.0.1',
+          title: 'AI 桌宠',
+          message: 'AI 桌宠 v2.1.0',
           detail:
             'AI 桌面宠物，支持 9 种大模型。\n\n' +
             'Clawd 角色 © Anthropic\n' +
@@ -545,7 +545,7 @@ ipcMain.on('show-context-menu', () => {
     },
     { type: 'separator' },
     {
-      label: '退出 Clawd',
+      label: '退出 AI 桌宠',
       role: 'quit',
     },
   ]
@@ -559,7 +559,7 @@ function activeSessionCount() { return streamsBySession.size }
 // 演示模式：没 client 时分块"模拟流"返回预设回复
 async function streamDemoReply(event, sessionId, prompt) {
   setStatus('thinking', '演示模式 · 思考中...')
-  const text = pickReply(prompt, { petName: config?.petName || 'Clawd' })
+  const text = pickReply(prompt, { petName: config?.petName || '桌宠' })
   const aborter = { aborted: false }
   streamsBySession.set(sessionId, { controller: { abort: () => { aborter.aborted = true } } })
   await new Promise((r) => setTimeout(r, 500 + Math.random() * 800))
@@ -851,7 +851,7 @@ async function pollActivity() {
   const appName = normalizeAppName(rawName)
 
   // Skip self（跨平台：Electron 在 Win 上叫 electron）
-  const selfNames = ['Electron', 'electron', 'claude-desktop-pet', 'Clawd', 'clawd-pet']
+  const selfNames = ['Electron', 'electron', 'AI Desktop Pet', 'ai-desktop-pet', 'claude-desktop-pet', 'Clawd', 'clawd-pet']
   if (selfNames.includes(rawName) || selfNames.includes(appName)) {
     lastApp = appName
     return
